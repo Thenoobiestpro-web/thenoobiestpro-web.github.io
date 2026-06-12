@@ -16,7 +16,6 @@ const getFavs    = () => JSON.parse(localStorage.getItem(LS_FAV)    || "[]");
 const getRecent  = () => JSON.parse(localStorage.getItem(LS_RECENT) || "[]");
 const saveFavs   = v  => localStorage.setItem(LS_FAV,    JSON.stringify(v));
 const saveRecent = v  => localStorage.setItem(LS_RECENT, JSON.stringify(v));
-
 /* ── VISUALIZER ── */
 function setupVisualizer() {
   if (audioCtx) return;
@@ -27,24 +26,42 @@ function setupVisualizer() {
     fadeGain = audioCtx.createGain(); fadeGain.gain.value = 1;
     source.connect(fadeGain); fadeGain.connect(analyser); analyser.connect(audioCtx.destination);
     visSource = source;
+    if (!visFrame) drawVis();
   } catch(e) {}
 }
 
 function drawVis() {
   const canvas = document.getElementById("visualizer");
-  if (!canvas || canvas.style.display === 'none') { visFrame = requestAnimationFrame(drawVis); return; }
+  if (!canvas) { visFrame = requestAnimationFrame(drawVis); return; }
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
-  if (!analyser) { ctx.clearRect(0,0,W,H); visFrame = requestAnimationFrame(drawVis); return; }
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteFrequencyData(data);
   ctx.clearRect(0,0,W,H);
-  const bars = 18, bw = W / bars - 1.5;
-  for (let i=0; i<bars; i++) {
-    const v = data[i] / 255, h = Math.max(3, v * H);
-    const x = i * (bw + 1.5), y = (H - h) / 2;
-    ctx.fillStyle = `rgba(255,92,0,${0.4 + v * 0.6})`;
-    ctx.beginPath(); ctx.roundRect(x, y, bw, h, 2); ctx.fill();
+  visFadeLevel += (visFadeTarget - visFadeLevel) * 0.05;
+  if (Math.abs(visFadeTarget - visFadeLevel) < 0.001) visFadeLevel = visFadeTarget;
+  const bars = 18, bw = W / bars - 1.5, gap = 1.5;
+  const data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+  if (analyser) analyser.getByteFrequencyData(data);
+  if (!visLastData || visLastData.length !== bars) visLastData = new Float32Array(bars).fill(0);
+  for (let i = 0; i < bars; i++) {
+    const x = i * (bw + gap);
+    const pausedBase = 0.12 + (i % 3) * 0.02;
+    const liveLevel = analyser ? data[i] / 255 : 0;
+    if (!audio.paused && analyser) {
+      visLastData[i] = liveLevel;
+    } else {
+      visLastData[i] = Math.max(pausedBase, visLastData[i] * 0.94);
+    }
+    const rawLevel = audio.paused ? visLastData[i] : visLastData[i];
+    const normalized = (1 - visFadeLevel) * rawLevel + visFadeLevel * pausedBase;
+    const h = Math.max(2.5, normalized * H);
+    const y = (H - h) / 2;
+    const width = bw * (0.96 - visFadeLevel * 0.25 + (audio.paused ? (i % 3) * 0.02 : 0));
+    const r = Math.round(255 * (1 - visFadeLevel) + 168 * visFadeLevel);
+    const g = Math.round(92 * (1 - visFadeLevel) + 168 * visFadeLevel);
+    const b = Math.round(0 * (1 - visFadeLevel) + 168 * visFadeLevel);
+    const alpha = 0.2 + (1 - visFadeLevel) * 0.4;
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.beginPath(); ctx.roundRect(x, y, width, h, 2); ctx.fill();
   }
   visFrame = requestAnimationFrame(drawVis);
 }
@@ -151,6 +168,7 @@ audio.addEventListener("playing", () => {
   document.getElementById("prog-fill").classList.add("playing");
   document.getElementById("np-status").innerHTML = `<span class="live-dot"></span> <span class="live-badge">LIVE</span>`;
   document.getElementById("visualizer").classList.add("active");
+  visFadeTarget = 0;
   if (!visFrame) drawVis();
 });
 audio.addEventListener("pause", () => {
@@ -158,6 +176,7 @@ audio.addEventListener("pause", () => {
   document.getElementById("prog-fill").classList.remove("playing");
   document.getElementById("np-status").innerHTML = "Paused";
   document.getElementById("visualizer").classList.remove("active");
+  visFadeTarget = 1;
 });
 audio.addEventListener("waiting", () => setLoading(true));
 audio.addEventListener("error", (e) => {
@@ -171,8 +190,13 @@ audio.addEventListener("canplay", () => setLoading(false));
 /* ── CONTROLS ── */
 function togglePlay() {
   if (!audio.src) return;
-  if (audio.paused) { audio.play().catch(()=>{}); fadeIn(0.3); }
-  else { fadeOut(0.2, () => audio.pause()); }
+  if (audio.paused) {
+    visFadeTarget = 0;
+    audio.play().catch(()=>{}); fadeIn(0.3);
+  } else {
+    visFadeTarget = 1;
+    fadeOut(0.2, () => audio.pause());
+  }
 }
 
 function setPlayIcon(s) {
@@ -241,6 +265,7 @@ function updateVolIcon() {
     : '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
   document.getElementById("vol-icon").innerHTML = path;
 }
+
 
 /* ── FAVOURITES ── */
 function isFav(url) { return getFavs().includes(url); }
