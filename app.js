@@ -82,7 +82,17 @@ function playStation(station, cardEl, skipFade) {
     const m = CAT_META[station.cat] || {emoji:"📻", grad:"#222"};
     const npArt = document.getElementById("np-art");
     npArt.style.background = m.grad; npArt.textContent = m.emoji;
-    document.getElementById("np-name").textContent = station.name;
+    const nameEl = document.getElementById("np-name");
+    const nameInner = nameEl.querySelector(".np-name-inner");
+    const nameText = nameEl.querySelector(".np-name-text:not(.np-name-clone)");
+    const nameClone = nameEl.querySelector(".np-name-clone");
+    if (nameInner && nameText && nameClone) {
+      nameText.textContent = station.name;
+      nameClone.textContent = station.name;
+      updateNpNameScroll();
+    } else {
+      nameEl.textContent = station.name;
+    }
     document.getElementById("np-status").innerHTML = "Connecting…";
     updateFavBtn(); setPlayIcon("pause"); setLoading(true);
     document.querySelectorAll(".station-card").forEach(c => {
@@ -104,6 +114,34 @@ function addToRecent(station) {
   if (r.length > 20) r = r.slice(0,20);
   saveRecent(r);
 }
+
+function updateNpNameScroll() {
+  const nameEl = document.getElementById("np-name");
+  if (!nameEl) return;
+  const nameInner = nameEl.querySelector(".np-name-inner");
+  const nameText = nameEl.querySelector(".np-name-text:not(.np-name-clone)");
+  if (!nameInner || !nameText) return;
+
+  const containerWidth = nameEl.clientWidth;
+  const textWidth = nameText.scrollWidth;
+  const gap = 24;
+  const scrollWidth = textWidth + gap;
+
+  if (textWidth > containerWidth) {
+    nameInner.style.setProperty("--np-name-scroll-width", `${scrollWidth}px`);
+    const duration = Math.max(8, scrollWidth / 28);
+    nameInner.style.animation = `${duration}s linear infinite np-name-scroll`;
+    nameEl.classList.add("marquee");
+  } else {
+    nameEl.classList.remove("marquee");
+    nameInner.style.animation = "";
+  }
+}
+
+window.addEventListener("resize", () => {
+  const nameEl = document.getElementById("np-name");
+  if (nameEl && nameEl.querySelector(".np-name-text")) updateNpNameScroll();
+});
 
 /* ── AUDIO EVENTS ── */
 audio.addEventListener("playing", () => {
