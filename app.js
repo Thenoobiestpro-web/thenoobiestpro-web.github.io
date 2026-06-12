@@ -5,6 +5,7 @@ let currentStation = null, currentCardEl = null;
 let activeFilter = "All", activeMood = null;
 let prevVol = 80, isMuted = false, isPlaying = false, failCount = 0;
 let audioCtx = null, analyser = null, visSource = null, visFrame = null, fadeGain = null;
+let visFadeTarget = 1, visFadeLevel = 1, visLastData = null;
 
 const LS_FAV    = "fluxio_favs";
 const LS_RECENT = "fluxio_recent";
