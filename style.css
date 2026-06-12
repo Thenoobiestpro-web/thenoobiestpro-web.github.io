@@ -330,7 +330,28 @@ input  { font-family: 'Inter', sans-serif; }
 }
 .np-art:hover { transform:scale(1.04); }
 .np-text { min-width:0; }
-.np-name { font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.np-name {
+  font-size:14px; font-weight:700;
+  min-width:0; overflow:hidden; position:relative;
+}
+.np-name-text {
+  display:inline-block; white-space:nowrap;
+}
+.np-name-inner {
+  display:inline-flex; align-items:center;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.np-name.marquee .np-name-inner {
+  animation-name: np-name-scroll;
+}
+@keyframes np-name-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-1 * var(--np-name-scroll-width, 0px))); }
+}
+.np-name-clone {
+  margin-left: 24px;
+}
 .np-status { font-size:12px; color:var(--t2); margin-top:2px; display:flex; align-items:center; gap:5px; }
 .np-fav { background:none; border:none; font-size:16px; cursor:pointer; padding:4px; flex-shrink:0; transition:transform .15s; line-height:1; }
 .np-fav:hover { transform:scale(1.2); }
