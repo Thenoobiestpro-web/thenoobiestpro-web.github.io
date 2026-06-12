@@ -341,6 +341,7 @@ input  { font-family: 'Inter', sans-serif; }
   display:inline-flex; align-items:center;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+  animation: none;
 }
 .np-name.marquee .np-name-inner {
   animation-name: np-name-scroll;
@@ -351,6 +352,10 @@ input  { font-family: 'Inter', sans-serif; }
 }
 .np-name-clone {
   margin-left: 24px;
+  display: none;
+}
+.np-name.marquee .np-name-clone {
+  display: inline-block;
 }
 .np-status { font-size:12px; color:var(--t2); margin-top:2px; display:flex; align-items:center; gap:5px; }
 .np-fav { background:none; border:none; font-size:16px; cursor:pointer; padding:4px; flex-shrink:0; transition:transform .15s; line-height:1; }
