@@ -131,10 +131,12 @@ function updateNpNameScroll() {
     nameInner.style.setProperty("--np-name-scroll-width", `${scrollWidth}px`);
     const duration = Math.max(8, scrollWidth / 28);
     nameInner.style.animation = `${duration}s linear infinite np-name-scroll`;
+    nameClone.style.display = "inline-block";
     nameEl.classList.add("marquee");
   } else {
     nameEl.classList.remove("marquee");
-    nameInner.style.animation = "";
+    nameInner.style.animation = "none";
+    nameClone.style.display = "none";
   }
 }
 
