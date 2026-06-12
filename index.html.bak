@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e0e0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Fluxio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+[data-theme="light"] {
+  --bg:        #f5f5f5;
+  --sidebar-bg:#ebebeb;
+  --surface:   #ffffff;
+  --card:      #f0f0f0;
+  --card-h:    #e8e8e8;
+  --t1:        #111111;
+  --t2:        #555555;
+  --t3:        #aaaaaa;
+  --border:    rgba(0,0,0,0.08);
+  --player-bg: #e8e8e8;
+  --chip-bg:   #e0e0e0;
+  --modal-bg:  rgba(0,0,0,0.6);
+  --toast-bg:  #333333;
+  --scrollbar: #ccc;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: 1fr var(--player-h);
+  grid-template-areas: "sidebar main" "player player";
+  transition: background .3s, color .3s;
+}
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--scrollbar); border-radius:3px; }
+button { font-family: 'Inter', sans-serif; cursor:pointer; }
+input  { font-family: 'Inter', sans-serif; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  grid-area: sidebar;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  transition: background .3s;
+}
+.logo-wrap {
+  padding: 22px 20px 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-mark {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items:center; justify-content:center;
+  flex-shrink: 0;
+}
+.logo-mark svg { width:18px; height:18px; fill:#fff; }
+.logo-text { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--t1); }
+.logo-text span { color: var(--accent); }
+.sb-nav { padding: 4px 0 8px; flex-shrink:0; }
+.sb-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px;
+  color: var(--t2); font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+  border-radius: 6px; margin: 1px 8px;
+  user-select: none;
+}
+.sb-item:hover { color: var(--t1); background: var(--border); }
+.sb-item.active { color: var(--t1); }
+.sb-item svg { width:18px; height:18px; fill:currentColor; flex-shrink:0; }
+.sb-divider { height:1px; background:var(--border); margin:8px 16px; }
+.sb-section-label {
+  padding: 4px 20px 6px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--t3);
+}
+.sb-library { flex:1; overflow-y:auto; padding-bottom:12px; }
+.sb-playlist {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 12px; cursor: pointer;
+  border-radius: 6px; margin: 1px 8px;
+  transition: background .12s;
+}
+.sb-playlist:hover { background: var(--border); }
+.sb-playlist.active { background: rgba(255,92,0,0.12); }
+.sb-playlist-art {
+  width:38px; height:38px; border-radius:5px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:17px;
+}
+.sb-playlist-info { min-width:0; }
+.sb-playlist-name {
+  font-size:13px; font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: var(--t1);
+}
+.sb-playlist-meta { font-size:11px; color:var(--t2); margin-top:1px; }
+
+/* ── MAIN ── */
+#main {
+  grid-area: main; overflow-y: auto;
+  background: var(--bg); position: relative;
+  transition: background .3s;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  padding: 12px 24px;
+  background: rgba(14,14,14,0.92);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  transition: background .3s;
+}
+[data-theme="light"] .topbar { background: rgba(245,245,245,0.92); }
+.search-wrap { position:relative; flex:1; max-width:360px; }
+.search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--t3); pointer-events:none; font-size:15px; }
+#search-input {
+  width:100%; padding:9px 12px 9px 36px;
+  background:var(--card); border:1px solid transparent; border-radius:20px;
+  color:var(--t1); font-size:14px; font-weight:500; outline:none;
+  transition: border-color .15s, background .15s;
+}
+#search-input:focus { border-color: var(--accent); background:var(--surface); }
+#search-input::placeholder { color:var(--t3); }
+.topbar-actions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.icon-btn {
+  width:36px; height:36px; border:none;
+  background:var(--card); border-radius:50%; color:var(--t2);
+  display:flex; align-items:center; justify-content:center;
+  transition:color .15s, background .15s, transform .1s; flex-shrink:0;
+}
+.icon-btn:hover { color:var(--t1); background:var(--card-h); transform:scale(1.05); }
+.icon-btn svg { width:16px; height:16px; fill:currentColor; }
+.random-btn {
+  padding:0 14px; height:36px;
+  background:var(--accent); border:none; border-radius:18px;
+  color:#fff; font-size:13px; font-weight:700;
+  display:flex; align-items:center; gap:6px;
+  transition:background .15s, transform .1s;
+  white-space: nowrap;
+}
+.random-btn:hover { background:var(--accent-d); transform:scale(1.03); }
+.random-btn svg { width:14px; height:14px; fill:#fff; flex-shrink:0; }
+/* hide shuffle label text on medium-small screens, keep icon */
+.random-btn .btn-label { display:inline; }
+.chips-row {
+  display:flex; gap:8px; flex-wrap:wrap;
+  padding:12px 24px 0;
+  position:sticky; top:57px; z-index:49;
+  background:var(--bg); padding-bottom:12px;
+  border-bottom:1px solid var(--border);
+  transition:background .3s;
+}
+[data-theme="light"] .chips-row { background: #f5f5f5; }
+.chip {
+  padding:6px 16px; border-radius:20px; border:none;
+  background:var(--chip-bg); color:var(--t2);
+  font-size:13px; font-weight:600; cursor:pointer;
+  transition:all .15s; white-space:nowrap;
+}
+.chip:hover { background:var(--card-h); color:var(--t1); }
+.chip.active { background:var(--t1); color:var(--bg); }
+
+/* ── CONTENT ── */
+.content { padding:24px; }
+#continue-bar {
+  background:linear-gradient(90deg, rgba(255,92,0,0.15) 0%, transparent 100%);
+  border:1px solid rgba(255,92,0,0.25); border-radius:var(--r);
+  padding:14px 18px; margin-bottom:28px;
+  display:flex; align-items:center; gap:14px;
+  cursor:pointer; transition:background .15s;
+}
+#continue-bar:hover { background:linear-gradient(90deg, rgba(255,92,0,0.22) 0%, transparent 100%); }
+#continue-bar.hidden { display:none !important; }
+.continue-art { width:44px; height:44px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.continue-text { flex:1; min-width:0; }
+.continue-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--accent); }
+.continue-name  { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.continue-play-btn {
+  width:40px; height:40px; border-radius:50%;
+  background:var(--accent); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  transition:transform .12s;
+}
+.continue-play-btn:hover { transform:scale(1.08); }
+.continue-play-btn svg { width:16px; height:16px; fill:#fff; margin-left:2px; }
+.sec-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; margin-top:8px; }
+.sec-title { font-size:20px; font-weight:800; }
+.sec-link {
+  font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--t2); background:none; border:none; cursor:pointer; transition:color .15s;
+}
+.sec-link:hover { color:var(--t1); }
+.sec-sep { margin-bottom:32px; }
+.mood-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin-bottom:32px; }
+.mood-card {
+  border-radius:var(--r); padding:18px 14px; cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:filter .15s, transform .15s; user-select:none; min-height:90px;
+}
+.mood-card:hover { filter:brightness(1.12); transform:translateY(-2px); }
+.mood-card.active-mood { outline:2px solid var(--t1); outline-offset:2px; }
+.mood-name { font-size:15px; font-weight:800; position:relative; z-index:1; }
+.mood-desc { font-size:11px; opacity:.7; margin-top:3px; position:relative; z-index:1; }
+.mood-emoji { position:absolute; bottom:-4px; right:-2px; font-size:48px; opacity:.3; transform:rotate(8deg); }
+.cat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:32px; }
+.cat-tile {
+  border-radius:var(--r); padding:18px 14px; cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:filter .15s, transform .15s; min-height:90px; user-select:none;
+}
+.cat-tile:hover { filter:brightness(1.1); transform:translateY(-2px); }
+.cat-tile.active-cat { outline:2px solid var(--t1); outline-offset:2px; }
+.cat-tile-name  { font-size:15px; font-weight:800; position:relative; z-index:1; }
+.cat-tile-count { font-size:11px; opacity:.7; margin-top:3px; position:relative; z-index:1; }
+.cat-tile-emoji { position:absolute; bottom:-4px; right:-2px; font-size:48px; opacity:.3; transform:rotate(8deg); }
+.stations-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); gap:10px; margin-bottom:12px; }
+.station-card {
+  background:var(--surface); border-radius:var(--r); padding:14px;
+  cursor:pointer; position:relative; transition:background .15s; overflow:hidden;
+}
+.station-card:hover { background:var(--card-h); }
+.station-card.active { background:var(--card); }
+.station-art {
+  width:100%; aspect-ratio:1; border-radius:6px; margin-bottom:12px;
+  display:flex; align-items:center; justify-content:center; font-size:30px;
+  position:relative; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+}
+.station-play-btn {
+  position:absolute; bottom:8px; right:8px;
+  width:40px; height:40px; border-radius:50%;
+  background:var(--accent); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transform:translateY(6px);
+  transition:opacity .18s, transform .18s;
+  box-shadow:0 4px 12px rgba(0,0,0,0.4); flex-shrink:0;
+}
+.station-play-btn svg { width:16px; height:16px; fill:#fff; margin-left:2px; }
+.station-card:hover .station-play-btn,
+.station-card.active .station-play-btn { opacity:1; transform:translateY(0); }
+.station-fav-btn {
+  position:absolute; top:10px; right:10px;
+  background:rgba(0,0,0,0.45); border:none; border-radius:50%;
+  width:28px; height:28px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; opacity:0; transition:opacity .15s; cursor:pointer;
+  backdrop-filter:blur(4px); color:var(--t2); z-index:2;
+}
+.station-card:hover .station-fav-btn { opacity:1; }
+.station-fav-btn.faved { opacity:1; color:#ff5c00; }
+.station-card-name { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+.station-card-sub { font-size:12px; color:var(--t2); }
+.live-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; letter-spacing:0.05em; color:var(--accent); }
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:livepulse 1.6s infinite; }
+@keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
+.empty-state { padding:60px 20px; text-align:center; color:var(--t2); }
+.empty-state .big { font-size:48px; margin-bottom:12px; }
+.empty-state p { font-size:15px; }
+
+/* ── PLAYER ── */
+#player {
+  grid-area: player; background: var(--player-bg);
+  border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; padding: 0 20px; gap: 12px;
+  position: relative; z-index: 100; transition: background .3s;
+}
+.np-wrap { display:flex; align-items:center; gap:12px; min-width:0; }
+.np-art {
+  width:52px; height:52px; border-radius:6px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:24px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.5); cursor:pointer; transition:transform .15s;
+}
+.np-art:hover { transform:scale(1.04); }
+.np-text { min-width:0; }
+.np-name { font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.np-status { font-size:12px; color:var(--t2); margin-top:2px; display:flex; align-items:center; gap:5px; }
+.np-fav { background:none; border:none; font-size:16px; cursor:pointer; padding:4px; flex-shrink:0; transition:transform .15s; line-height:1; }
+.np-fav:hover { transform:scale(1.2); }
+.transport-wrap { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.transport-btns { display:flex; align-items:center; gap:14px; }
+.t-btn { background:none; border:none; color:var(--t2); display:flex; align-items:center; justify-content:center; padding:4px; border-radius:50%; transition:color .15s, transform .1s; }
+.t-btn:hover { color:var(--t1); transform:scale(1.08); }
+.t-btn svg { width:18px; height:18px; fill:currentColor; }
+.t-btn.sm svg { width:14px; height:14px; }
+#play-pause-btn {
+  width:40px; height:40px; border-radius:50%;
+  background:var(--t1); color:var(--bg); border:none;
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .12s, background .15s; flex-shrink:0;
+}
+#play-pause-btn:hover { transform:scale(1.08); }
+#play-pause-btn svg { width:16px; height:16px; fill:currentColor; }
+#visualizer { width:120px; height:28px; flex-shrink:0; opacity:0; transition:opacity .4s; }
+#visualizer.active { opacity:1; }
+.progress-row { display:flex; align-items:center; gap:8px; width:100%; max-width:380px; }
+.prog-time { font-size:11px; color:var(--t2); width:30px; text-align:center; }
+.prog-track { flex:1; height:4px; background:var(--card); border-radius:2px; overflow:hidden; position:relative; }
+.prog-fill { height:100%; border-radius:2px; background:var(--t3); width:40%; transition:background .2s; }
+.prog-fill.playing { background:var(--accent); animation:shimmer 2s ease-in-out infinite; }
+@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:0.65} }
+.spin-wrap { position:absolute; width:40px; height:40px; border-radius:50%; display:none; align-items:center; justify-content:center; pointer-events:none; }
+.spin-wrap.show { display:flex; }
+.spinner { width:24px; height:24px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.vol-wrap { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+.vol-btn { background:none; border:none; color:var(--t2); display:flex; align-items:center; justify-content:center; padding:4px; cursor:pointer; transition:color .15s; }
+.vol-btn:hover { color:var(--t1); }
+.vol-btn svg { width:16px; height:16px; fill:currentColor; }
+#vol-slider { appearance:none; -webkit-appearance:none; width:90px; height:4px; background:var(--card); border-radius:2px; outline:none; cursor:pointer; }
+#vol-slider::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--t1); cursor:pointer; }
+#vol-slider:hover::-webkit-slider-thumb { background:var(--accent); }
+
+/* ── BOTTOM NAV (mobile only) ── */
+#bottom-nav {
+  display: none;
+  grid-area: bottom-nav;
+  background: var(--sidebar-bg);
+  border-top: 1px solid var(--border);
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 60px;
+  z-index: 200;
+  /* sits above player, but player is above content */
+}
+.bnav-items { display:flex; height:100%; }
+.bnav-item {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4px;
+  background:none; border:none; color:var(--t3);
+  font-size:10px; font-weight:700; letter-spacing:0.04em;
+  cursor:pointer; transition:color .15s;
+  padding: 0 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.bnav-item.active { color: var(--accent); }
+.bnav-item svg { width:22px; height:22px; fill:currentColor; }
+
+/* ── TOAST ── */
+#toast {
+  position:fixed; bottom:calc(var(--player-h) + 16px); left:50%; transform:translateX(-50%) translateY(10px);
+  background:var(--toast-bg); color:#fff;
+  padding:10px 18px; border-radius:8px;
+  font-size:13px; font-weight:600;
+  pointer-events:none; opacity:0;
+  transition:opacity .25s, transform .25s;
+  z-index:9999; white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── MODAL ── */
+#shortcuts-modal {
+  position:fixed; inset:0; z-index:1000;
+  background:var(--modal-bg); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+#shortcuts-modal.open { opacity:1; pointer-events:auto; }
+.modal-box {
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:28px; width:360px; max-width:90vw;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-size:18px; font-weight:800; margin-bottom:20px; }
+.shortcut-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); }
+.shortcut-row:last-child { border-bottom:none; }
+.shortcut-desc { font-size:14px; color:var(--t2); }
+.shortcut-key { display:inline-flex; gap:4px; }
+.key { display:inline-block; background:var(--card); border:1px solid var(--border); border-radius:4px; padding:2px 7px; font-size:12px; font-weight:700; color:var(--t1); font-family:monospace; }
+.modal-close { margin-top:20px; width:100%; padding:10px; background:var(--accent); border:none; border-radius:8px; color:#fff; font-size:14px; font-weight:700; cursor:pointer; transition:background .15s; }
+.modal-close:hover { background:var(--accent-d); }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — tablet (641–900px)
+   ══════════════════════════════════════════ */
+@media (max-width:900px) and (min-width:641px) {
+  :root { --sidebar-w: 64px; }
+  .logo-text, .sb-item span:not(.sr-only), .sb-section-label,
+  .sb-playlist-info { display:none; }
+  .logo-wrap { justify-content:center; padding:16px 0; }
+  .sb-item { justify-content:center; padding:12px 0; margin:2px 8px; }
+  .sb-playlist { justify-content:center; padding:8px 0; }
+  .sb-playlist-art { width:36px; height:36px; }
+  .topbar { padding:10px 16px; }
+  .content { padding:16px; }
+  .chips-row { padding:10px 16px; }
+  .random-btn .btn-label { display:none; }
+  .random-btn { padding:0 10px; }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — mobile (≤640px)
+   ══════════════════════════════════════════ */
+@media (max-width:640px) {
+  :root {
+    --player-h: 70px;
+    --bottom-nav-h: 60px;
+  }
+
+  /* Layout: single column, player above bottom nav */
+  body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr var(--player-h);
+    grid-template-areas: "main" "player";
+    padding-bottom: var(--bottom-nav-h);
+  }
+
+  /* Hide desktop sidebar */
+  #sidebar { display: none; }
+
+  /* Show bottom nav */
+  #bottom-nav { display: block; }
+
+  /* ── Topbar ── */
+  .topbar { padding: 10px 12px; gap: 8px; }
+  .search-wrap { max-width: none; }
+  /* collapse icon-btn labels; only show theme + share on mobile */
+  .topbar-actions .icon-btn:not(.mobile-show) { display: none; }
+  /* always show theme toggle & share */
+  .topbar-actions { gap: 6px; }
+  .random-btn { padding: 0 10px; }
+  .random-btn .btn-label { display: none; }
+  .random-btn { width: 36px; height: 36px; padding: 0; border-radius: 50%; justify-content: center; }
+  .random-btn svg { margin: 0; }
+
+  /* ── Chips ── */
+  .chips-row {
+    padding: 10px 12px;
+    top: 53px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 6px;
+    scrollbar-width: none;
+  }
+  .chips-row::-webkit-scrollbar { display: none; }
+  .chip { padding: 8px 16px; font-size: 13px; }
+
+  /* ── Content ── */
+  .content { padding: 14px 12px; }
+
+  /* Mood + cat grids: 2 columns */
+  .mood-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .cat-grid  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* Station cards: 2 columns */
+  .stations-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* Always show fav + play buttons on cards (no hover on touch) */
+  .station-fav-btn { opacity: 1; }
+  .station-play-btn { opacity: 1; transform: translateY(0); }
+
+  /* Slightly bigger touch area for play btn on card */
+  .station-play-btn { width: 36px; height: 36px; bottom: 6px; right: 6px; }
+
+  /* Section titles smaller */
+  .sec-title { font-size: 17px; }
+
+  /* Hero genre banner */
+  .genre-hero { padding: 20px 16px !important; }
+  .genre-hero .emoji-big { font-size: 40px !important; }
+  .genre-hero .title-big { font-size: 24px !important; }
+
+  /* ── Player ── */
+  #player {
+    padding: 0 12px;
+    gap: 8px;
+    /* Keep 3-col layout but tighten */
+  }
+
+  /* Smaller now-playing art */
+  .np-art { width: 44px; height: 44px; font-size: 20px; }
+  .np-name { font-size: 13px; }
+  .np-status { font-size: 11px; }
+
+  /* Compact transport */
+  .transport-btns { gap: 10px; }
+  #play-pause-btn { width: 38px; height: 38px; }
+  #play-pause-btn svg { width: 14px; height: 14px; }
+
+  /* Hide visualizer + volume on mobile */
+  #visualizer { display: none; }
+  .vol-wrap { display: none; }
+
+  /* Shrink progress row */
+  .progress-row { max-width: 200px; }
+  .prog-time { display: none; }
+
+  /* Hide fav button in player on mobile (use bottom nav favs instead) */
+  .np-fav { display: none; }
+
+  /* Toast above bottom nav */
+  #toast { bottom: calc(var(--player-h) + var(--bottom-nav-h) + 8px); }
+
+  /* Continue bar compact */
+  #continue-bar { padding: 12px 14px; margin-bottom: 20px; gap: 10px; }
+  .continue-name { font-size: 14px; }
+}
+
+/* ══════════════════════════════════════════
+   Very small screens (≤380px)
+   ══════════════════════════════════════════ */
+@media (max-width:380px) {
+  .stations-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .station-card { padding: 10px; }
+  .station-card-name { font-size: 12px; }
+  .mood-row, .cat-grid { gap: 6px; }
+  .mood-card, .cat-tile { padding: 14px 10px; min-height: 80px; }
+  .mood-name, .cat-tile-name { font-size: 13px; }
+}
+
+/* ── Tap highlight suppress on touch ── */
+@media (hover: none) {
+  .station-card:active { background: var(--card-h); }
+  .chip:active { background: var(--card-h); color: var(--t1); }
+  .mood-card:active, .cat-tile:active { filter: brightness(1.12); }
+}
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>
+    </div>
+    <div class="logo-text">Flux<span>FM</span></div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-item active" id="sb-home" onclick="navHome()">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>Home</span>
+    </div>
+    <div class="sb-item" id="sb-favs" onclick="navFavs()">
+      <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      <span>Favourites</span>
+    </div>
+    <div class="sb-item" id="sb-recent" onclick="navRecent()">
+      <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      <span>Recently Played</span>
+    </div>
+  </nav>
+  <div class="sb-divider"></div>
+  <div class="sb-section-label">Browse genres</div>
+  <div class="sb-library" id="sb-library"></div>
+</aside>
+
+<main id="main">
+  <div class="topbar">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input id="search-input" placeholder="Search stations…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="topbar-actions">
+      <button class="random-btn" onclick="playRandom()" title="Shuffle">
+        <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+        <span class="btn-label">Shuffle</span>
+      </button>
+      <button class="icon-btn mobile-show" onclick="toggleTheme()" title="Toggle theme">
+        <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 0 0 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0zM7.05 18.36l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0z"/></svg>
+      </button>
+      <button class="icon-btn mobile-show" onclick="shareStation()" title="Share">
+        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+      </button>
+      <button class="icon-btn" onclick="showShortcuts()" title="Keyboard shortcuts (?)">
+        <svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 5H5v-2h2v2zm9 0H8v-2h8v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2zm3 6h-2v-2h2v2zm0-3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="chips-row" id="chips-row"></div>
+  <div class="content" id="content"></div>
+</main>
+
+<!-- Mobile bottom navigation -->
+<nav id="bottom-nav">
+  <div class="bnav-items">
+    <button class="bnav-item active" id="bnav-home" onclick="navHome()">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Home
+    </button>
+    <button class="bnav-item" id="bnav-favs" onclick="navFavs()">
+      <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      Favourites
+    </button>
+    <button class="bnav-item" id="bnav-recent" onclick="navRecent()">
+      <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      Recent
+    </button>
+    <button class="bnav-item" id="bnav-search" onclick="focusSearch()">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      Search
+    </button>
+  </div>
+</nav>
+
+<div id="player">
+  <div class="np-wrap">
+    <div class="np-art" id="np-art" onclick="scrollToActive()">📻</div>
+    <div class="np-text">
+      <div class="np-name" id="np-name">Select a station</div>
+      <div class="np-status" id="np-status">—</div>
+    </div>
+    <button class="np-fav" id="np-fav-btn" onclick="toggleFavCurrent()" title="Favourite">♡</button>
+  </div>
+  <div class="transport-wrap">
+    <div class="transport-btns">
+      <button class="t-btn sm" onclick="playAdjacent(-1)" title="Previous">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+        <div class="spin-wrap" id="spinner-wrap"><div class="spinner"></div></div>
+        <button id="play-pause-btn" onclick="togglePlay()" title="Play / Pause (Space)">
+          <svg id="pp-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+      </div>
+      <button class="t-btn sm" onclick="playAdjacent(1)" title="Next">
+        <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14zM16 6h2v12h-2z"/></svg>
+      </button>
+      <canvas id="visualizer" width="120" height="28"></canvas>
+    </div>
+    <div class="progress-row">
+      <span class="prog-time">LIVE</span>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <span class="prog-time">—</span>
+    </div>
+  </div>
+  <div class="vol-wrap">
+    <button class="vol-btn" onclick="toggleMute()" id="vol-btn">
+      <svg id="vol-icon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+    </button>
+    <input type="range" id="vol-slider" min="0" max="100" value="80">
+  </div>
+</div>
+
+<div id="shortcuts-modal" onclick="closeShortcuts(event)">
+  <div class="modal-box">
+    <div class="modal-title">Keyboard shortcuts</div>
+    <div class="shortcut-row"><span class="shortcut-desc">Play / Pause</span><span class="shortcut-key"><span class="key">Space</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Next station</span><span class="shortcut-key"><span class="key">→</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Previous station</span><span class="shortcut-key"><span class="key">←</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Volume up</span><span class="shortcut-key"><span class="key">↑</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Volume down</span><span class="shortcut-key"><span class="key">↓</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Mute / Unmute</span><span class="shortcut-key"><span class="key">M</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Favourite station</span><span class="shortcut-key"><span class="key">F</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Random station</span><span class="shortcut-key"><span class="key">R</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Search</span><span class="shortcut-key"><span class="key">/</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">Share station</span><span class="shortcut-key"><span class="key">S</span></span></div>
+    <div class="shortcut-row"><span class="shortcut-desc">This overlay</span><span class="shortcut-key"><span class="key">?</span></span></div>
+    <button class="modal-close" onclick="closeShortcuts()">Got it</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<audio id="radio" preload="none"></audio>
+
+<script>
+/* ── STATION DATA ── */
+const STATIONS = [
+  /* Hit Music */
+  {name:"Big Top 40",                  cat:"Hit Music",   url:"https://media-ice.musicradio.com/BigTop40MP3"},
+  {name:"Capital UK",                  cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalUKMP3"},
+  {name:"Capital London",              cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalMP3"},
+  {name:"Capital Anthems",             cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalAnthemsMP3"},
+  {name:"Capital Dance",               cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalDanceMP3"},
+  {name:"Capital Chill",               cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalChillMP3"},
+  {name:"Capital XTRA UK",             cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalXTRANationalMP3"},
+  {name:"Capital XTRA London",         cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalXTRALondonMP3"},
+  {name:"Capital XTRA Reloaded",       cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalXTRAReloadedMP3"},
+  {name:"Capital Birmingham",          cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalBirminghamMP3"},
+  {name:"Capital Brighton",            cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalBrightonMP3"},
+  {name:"Capital Edinburgh",           cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalEdinburghMP3"},
+  {name:"Capital Glasgow",             cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalGlasgowMP3"},
+  {name:"Capital Liverpool",           cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalLiverpoolMP3"},
+  {name:"Capital Manchester",          cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalManchesterMP3"},
+  {name:"Capital South Coast",         cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalSouthCoastMP3"},
+  {name:"Capital South Wales",         cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalSouthWalesMP3"},
+  {name:"Capital Yorkshire (East)",    cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalYorkshireEastMP3"},
+  {name:"Capital Yorkshire (S&W)",     cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalYorkshireSouthWestMP3"},
+  {name:"Capital Lancashire (Preston)",cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalPrestonMP3"},
+  {name:"Capital Tyne & Wear",         cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalTyneWearMP3"},
+  {name:"Capital Teesside",            cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalTeessideMP3"},
+  {name:"Capital Derbyshire",          cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalDerbyshireMP3"},
+  {name:"Capital Leicestershire",      cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalLeicestershireMP3"},
+  {name:"Capital Nottinghamshire",     cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalNottinghamshireMP3"},
+  {name:"Capital Coventry",            cat:"Hit Music",   url:"https://media-ice.musicradio.com/CapitalCoventryMP3"},
+
+  /* Heart */
+  {name:"Heart UK",                    cat:"Heart",       url:"https://media-ice.musicradio.com/HeartUKMP3"},
+  {name:"Heart London",                cat:"Heart",       url:"https://media-ice.musicradio.com/HeartLondonMP3"},
+  {name:"Heart Dance",                 cat:"Heart",       url:"https://media-ice.musicradio.com/HeartDanceMP3"},
+  {name:"Heart Love",                  cat:"Heart",       url:"https://media-ice.musicradio.com/HeartLoveMP3"},
+  {name:"Heart Musicals",              cat:"Heart",       url:"https://media-ice.musicradio.com/HeartMusicalsMP3"},
+  {name:"Heart 70s",                   cat:"Heart",       url:"https://media-ice.musicradio.com/Heart70sMP3"},
+  {name:"Heart 80s",                   cat:"Heart",       url:"https://media-ice.musicradio.com/Heart80sMP3"},
+  {name:"Heart 90s",                   cat:"Heart",       url:"https://media-ice.musicradio.com/Heart90sMP3"},
+  {name:"Heart 00s",                   cat:"Heart",       url:"https://media-ice.musicradio.com/Heart00sMP3"},
+  {name:"Heart 10s",                   cat:"Heart",       url:"https://media-ice.musicradio.com/Heart10sMP3"},
+  {name:"Heart Bristol",               cat:"Heart",       url:"https://media-ice.musicradio.com/HeartBristolMP3"},
+  {name:"Heart Hampshire",             cat:"Heart",       url:"https://media-ice.musicradio.com/HeartHampshireMP3"},
+  {name:"Heart Kent",                  cat:"Heart",       url:"https://media-ice.musicradio.com/HeartKentMP3"},
+  {name:"Heart Sussex",                cat:"Heart",       url:"https://media-ice.musicradio.com/HeartSussexMP3"},
+  {name:"Heart Essex",                 cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartEssexMP3"},
+  {name:"Heart Norfolk",               cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartNorfolkMP3"},
+  {name:"Heart Suffolk",               cat:"Heart",       url:"https://media-ice.musicradio.com/HeartSuffolkMP3"},
+  {name:"Heart Yorkshire",             cat:"Heart",       url:"https://media-ice.musicradio.com/HeartYorkshireMP3"},
+  {name:"Heart West Midlands",         cat:"Heart",       url:"https://media-ice.musicradio.com/HeartWestMidsMP3"},
+  {name:"Heart Leicestershire",        cat:"Heart",       url:"https://media-ice.musicradio.com/HeartLeicestershireMP3"},
+  {name:"Heart Nottinghamshire",       cat:"Heart",       url:"https://media-ice.musicradio.com/HeartNottinghamshireMP3"},
+  {name:"Heart North West",            cat:"Heart",       url:"https://media-ice.musicradio.com/HeartNorthWestMP3"},
+  {name:"Heart Scotland (East)",       cat:"Heart",       url:"https://media-ice.musicradio.com/HeartEdinburghMP3"},
+  {name:"Heart Scotland (West)",       cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartGlasgowMP3"},
+  {name:"Heart Wales (South)",         cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartSouthWalesMP3"},
+  {name:"Heart Cornwall",              cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartCornwallMP3"},
+  {name:"Heart Devon (Exeter)",        cat:"Heart",       url:"https://media-ice.musicradio.com/HeartEastDevonMP3"},
+  {name:"Heart Plymouth",              cat:"Heart",       url:"https://media-ice.musicradio.com/HeartPlymouthMP3"},
+  {name:"Heart Dorset",                cat:"Heart",       url:"https://media-ice.musicradio.com/HeartDorsetMP3"},
+  {name:"Heart Wiltshire",             cat:"Heart",       url:"https://media-ice.musicradio.com/HeartWiltshireMP3"},
+  {name:"Heart Oxfordshire",           cat:"Heart",       url:"https://media-ice.musicradio.com/HeartOxfordshireMP3"},
+  {name:"Heart Berkshire",             cat:"Heart",       url:"https://media-ice.musicradio.com/HeartBerkshireMP3"},
+  {name:"Heart Cambridgeshire",        cat:"Heart",       url:"https://media-ice.musicradio.com/HeartCambridgeMP3"},
+  {name:"Heart Peterborough",          cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartPeterboroughMP3"},
+  {name:"Heart Bath",                  cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartBathMP3"},
+  {name:"Heart Gloucestershire",       cat:"Heart",       url:"https://media-ice.musicradio.com/ HeartGloucestershireMP3"},
+  {name:"Heart Somerset",              cat:"Heart",       url:"https://media-ice.musicradio.com/HeartSomersetMP3"},
+  {name:"Heart Northamptonshire",      cat:"Heart",       url:"https://media-ice.musicradio.com/HeartNorthamptonshireMP3"},
+
+  /* Smooth */
+  {name:"Smooth UK",                   cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothUKMP3"},
+  {name:"Smooth London",               cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothLondonMP3"},
+  {name:"Smooth Chill",                cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothChillMP3"},
+  {name:"Smooth Relax",                cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothRelaxMP3"},
+  {name:"Smooth Soul",                 cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothSoulMP3"},
+  {name:"Smooth Country",              cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothCountryMP3"},
+  {name:"Smooth 70s",                  cat:"Smooth",      url:"https://media-ice.musicradio.com/Smooth70sMP3"},
+  {name:"Smooth 80s",                  cat:"Smooth",      url:"https://media-ice.musicradio.com/Smooth80sMP3"},
+  {name:"Smooth Scotland",             cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothScotlandMP3"},
+  {name:"Smooth North West",           cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothNorthWestMP3"},
+  {name:"Smooth North East (T&W)",     cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothNorthEastNMP3"},
+  {name:"Smooth East Midlands",        cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothEastMidsMP3"},
+  {name:"Smooth West Midlands",        cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothWestMidsMP3"},
+  {name:"Smooth Hampshire",            cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothHampshireMP3"},
+  {name:"Smooth Kent",                 cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothKentMP3"},
+  {name:"Smooth Sussex",               cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothSussexMP3"},
+  {name:"Smooth Essex",                cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothEssexMP3"},
+  {name:"Smooth Norfolk",              cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothNorfolkMP3"},
+  {name:"Smooth Suffolk",              cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothSuffolkMP3"},
+  {name:"Smooth Bristol",              cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothBristolMP3"},
+  {name:"Smooth Gloucester",           cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothGloucesterMP3"},
+  {name:"Smooth Dorset",               cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothDorsetMP3"},
+  {name:"Smooth Wiltshire",            cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothWiltshireMP3"},
+  {name:"Smooth Berkshire",            cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothBerkshireMP3"},
+  {name:"Smooth Plymouth",             cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothPlymouthMP3"},
+  {name:"Smooth South Wales",          cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothSouthWalesMP3"},
+  {name:"Smooth Lake District",        cat:"Smooth",      url:"https://media-ice.musicradio.com/SmoothLakeDistrictMP3"},
+
+  /* Classical */
+  {name:"Classic FM",                  cat:"Classical",   url:"https://media-ice.musicradio.com/ClassicFMMP3"},
+  {name:"Classic FM Calm",             cat:"Classical",   url:"https://media-ice.musicradio.com/ClassicFMCalmMP3"},
+  {name:"Classic FM Movies",           cat:"Classical",   url:"https://media-ice.musicradio.com/ClassicFMMoviesMP3"},
+
+  /* Rock & Indie */
+  {name:"Radio X UK",                  cat:"Rock & Indie", url:"https://media-ice.musicradio.com/RadioXUKMP3"},
+  {name:"Radio X London",              cat:"Rock & Indie", url:"https://media-ice.musicradio.com/RadioXLondonMP3"},
+  {name:"Radio X Manchester",          cat:"Rock & Indie", url:"https://media-ice.musicradio.com/RadioXManchesterMP3"},
+  {name:"Radio X Classic Rock",        cat:"Rock & Indie", url:"https://media-ice.musicradio.com/RadioXClassicRockMP3"},
+  {name:"Radio X Chilled",             cat:"Rock & Indie", url:"https://media-ice.musicradio.com/RadioXChilledMP3"},
+  {name:"Radio X 90s",                 cat:"Rock & Indie", url:"https://media-ice.musicradio.com/RadioX90sMP3"},
+  {name:"Radio X 00s",                 cat:"Rock & Indie", url:"https://media-ice.musicradio.com/RadioX00sMP3"},
+
+  /* Talk & News */
+  {name:"LBC UK",                      cat:"Talk & News", url:"https://media-ice.musicradio.com/LBCUKMP3"},
+  {name:"LBC London",                  cat:"Talk & News", url:"https://media-ice.musicradio.com/LBCLondonMP3"},
+  {name:"LBC News London",             cat:"Talk & News", url:"https://media-ice.musicradio.com/LBCNewsLondonMP3"},
+  {name:"LBC News UK",                 cat:"Talk & News", url:"https://media-ice.musicradio.com/LBCNewsUKMP3"},
+
+  /* Gold & Oldies */
+  {name:"Gold London",                 cat:"Gold & Oldies", url:"https://media-ice.musicradio.com/GoldMP3"},
+  {name:"Gold UK Plus",                cat:"Gold & Oldies", url:"https://media-ice.musicradio.com/Gold-plus"},
+
+  /* Pop */
+  {name:"Riviera Radio",               cat:"Pop",         url:"https://media-ice.musicradio.com/RivieraRadioMP3"},
+  {name:"Riviera Relax",               cat:"Pop",         url:"https://media-ice.musicradio.com/RivieraRelaxMP3"},
+];
+
+/* Category metadata */
+const CAT_META = {
+  "Hit Music":   {emoji:"🎵", grad:"linear-gradient(135deg,#7c3aed 0%,#db2777 100%)"},
+  "Heart":       {emoji:"💖", grad:"linear-gradient(135deg,#be123c 0%,#f97316 100%)"},
+  "Smooth":      {emoji:"🎶", grad:"linear-gradient(135deg,#1e3a5f 0%,#0891b2 100%)"},
+  "Classical":   {emoji:"🎻", grad:"linear-gradient(135deg,#78350f 0%,#d97706 100%)"},
+  "Rock & Indie":{emoji:"🎸", grad:"linear-gradient(135deg,#1c1917 0%,#57534e 100%)"},
+  "Talk & News": {emoji:"📰", grad:"linear-gradient(135deg,#1e293b 0%,#64748b 100%)"},
+  "Gold & Oldies":{emoji:"⭐", grad:"linear-gradient(135deg,#713f12 0%,#ca8a04 100%)"},
+  "Pop":         {emoji:"🌴", grad:"linear-gradient(135deg,#065f46 0%,#10b981 100%)"},
+};
+
+const MOODS = [
+  {name:"Chill",   desc:"Low-key & relaxed",  emoji:"🌙", grad:"linear-gradient(135deg,#0f172a,#1e3a5f)",
+   stations:["Smooth Chill","Smooth Relax","Capital Chill","Classic FM Calm","Radio X Chilled","Riviera Relax"]},
+  {name:"Upbeat",  desc:"Feel-good hits",      emoji:"⚡", grad:"linear-gradient(135deg,#450a0a,#7f1d1d)",
+   stations:["Capital UK","Heart Dance","Big Top 40","Capital Dance","Capital XTRA UK","Heart UK"]},
+  {name:"Classic", desc:"Timeless music",      emoji:"🎻", grad:"linear-gradient(135deg,#78350f,#d97706)",
+   stations:["Classic FM","Classic FM Movies","Classic FM Calm","Smooth Soul","Smooth 70s","Smooth 80s"]},
+  {name:"News",    desc:"Stay informed",        emoji:"📡", grad:"linear-gradient(135deg,#0c1a2e,#1e3a5f)",
+   stations:["LBC UK","LBC London","LBC News UK","LBC News London"]},
+];
+
+/* ── STATE ── */
+const audio = document.getElementById("radio");
+audio.crossOrigin = "anonymous";
+let currentStation = null, currentCardEl = null;
+let activeFilter = "All", activeMood = null;
+let prevVol = 80, isMuted = false, isPlaying = false, failCount = 0;
+let audioCtx = null, analyser = null, visSource = null, visFrame = null, fadeGain = null;
+
+const LS_FAV = "fluxio_favs", LS_RECENT = "fluxio_recent", LS_LAST = "fluxio_last";
+const LS_VOL = "fluxio_vol",  LS_THEME  = "fluxio_theme";
+const getFavs   = () => JSON.parse(localStorage.getItem(LS_FAV)    || "[]");
+const getRecent = () => JSON.parse(localStorage.getItem(LS_RECENT) || "[]");
+const saveFavs  = v  => localStorage.setItem(LS_FAV,    JSON.stringify(v));
+const saveRecent= v  => localStorage.setItem(LS_RECENT, JSON.stringify(v));
+
+/* ── VISUALIZER ── */
+function setupVisualizer() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 64;
+    const source = audioCtx.createMediaElementSource(audio);
+    fadeGain = audioCtx.createGain(); fadeGain.gain.value = 1;
+    source.connect(fadeGain); fadeGain.connect(analyser); analyser.connect(audioCtx.destination);
+    visSource = source;
+  } catch(e) {}
+}
+function drawVis() {
+  const canvas = document.getElementById("visualizer");
+  if (!canvas || canvas.style.display === 'none') { visFrame = requestAnimationFrame(drawVis); return; }
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  if (!analyser) { ctx.clearRect(0,0,W,H); visFrame = requestAnimationFrame(drawVis); return; }
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  ctx.clearRect(0,0,W,H);
+  const bars = 18, bw = W / bars - 1.5;
+  for (let i=0; i<bars; i++) {
+    const v = data[i] / 255, h = Math.max(3, v * H);
+    const x = i * (bw + 1.5), y = (H - h) / 2;
+    ctx.fillStyle = `rgba(255,92,0,${0.4 + v * 0.6})`;
+    ctx.beginPath(); ctx.roundRect(x, y, bw, h, 2); ctx.fill();
+  }
+  visFrame = requestAnimationFrame(drawVis);
+}
+
+/* ── FADE ── */
+function fadeIn(d=0.4) {
+  if (!fadeGain) return;
+  fadeGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  fadeGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  fadeGain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + d);
+}
+function fadeOut(d=0.3, cb) {
+  if (!fadeGain) { cb && cb(); return; }
+  fadeGain.gain.cancelScheduledValues(audioCtx.currentTime);
+  fadeGain.gain.setValueAtTime(fadeGain.gain.value, audioCtx.currentTime);
+  fadeGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + d);
+  setTimeout(() => cb && cb(), d * 1000 + 50);
+}
+
+/* ── PLAY ── */
+function playStation(station, cardEl, skipFade) {
+  const doLoad = () => {
+    setupVisualizer();
+    currentStation = station; currentCardEl = cardEl; failCount = 0;
+    localStorage.setItem(LS_LAST, station.url);
+    addToRecent(station);
+    audio.src = station.url; audio.load();
+    audio.play().catch(err => {
+      console.error("Audio play() failed:", err);
+      showToast("Playback error");
+      document.getElementById("np-status").textContent = "Playback error";
+    });
+    fadeIn(0.5);
+    const m = CAT_META[station.cat] || {emoji:"📻", grad:"#222"};
+    const npArt = document.getElementById("np-art");
+    npArt.style.background = m.grad; npArt.textContent = m.emoji;
+    document.getElementById("np-name").textContent = station.name;
+    document.getElementById("np-status").innerHTML = "Connecting…";
+    updateFavBtn(); setPlayIcon("pause"); setLoading(true);
+    document.querySelectorAll(".station-card").forEach(c => {
+      c.classList.toggle("active", c.dataset.url === station.url);
+      const pb = c.querySelector(".station-play-btn svg");
+      if (pb) pb.innerHTML = c.dataset.url === station.url
+        ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>'
+        : '<path d="M8 5v14l11-7z"/>';
+    });
+    updateContinueBar();
+    document.querySelectorAll(".sb-playlist").forEach(x => x.classList.toggle("active", x.dataset.cat === station.cat));
+  };
+  if (skipFade || !isPlaying) doLoad(); else fadeOut(0.25, doLoad);
+}
+function addToRecent(station) {
+  let r = getRecent().filter(s => s.url !== station.url);
+  r.unshift({name:station.name, cat:station.cat, url:station.url});
+  if (r.length > 20) r = r.slice(0,20);
+  saveRecent(r);
+}
+
+/* ── AUDIO EVENTS ── */
+audio.addEventListener("playing", () => {
+  isPlaying = true; setLoading(false); setPlayIcon("pause");
+  document.getElementById("prog-fill").classList.add("playing");
+  document.getElementById("np-status").innerHTML = `<span class="live-dot"></span> <span class="live-badge">LIVE</span>`;
+  document.getElementById("visualizer").classList.add("active");
+  if (!visFrame) drawVis();
+});
+audio.addEventListener("pause", () => {
+  isPlaying = false; setPlayIcon("play");
+  document.getElementById("prog-fill").classList.remove("playing");
+  document.getElementById("np-status").innerHTML = "Paused";
+  document.getElementById("visualizer").classList.remove("active");
+});
+audio.addEventListener("waiting", () => setLoading(true));
+audio.addEventListener("error", (e) => {
+  console.error("Audio element error event:", e, audio.error);
+  setLoading(false); failCount++; isPlaying = false; setPlayIcon("play");
+  document.getElementById("np-status").innerHTML = "Stream unavailable";
+  if (failCount >= 2 && currentStation) { showToast("Auto-skipping…"); setTimeout(() => playAdjacent(1), 1500); }
+});
+audio.addEventListener("canplay", () => setLoading(false));
+
+/* ── CONTROLS ── */
+function togglePlay() {
+  if (!audio.src) return;
+  if (audio.paused) { audio.play().catch(()=>{}); fadeIn(0.3); }
+  else { fadeOut(0.2, () => audio.pause()); }
+}
+function setPlayIcon(s) {
+  document.getElementById("pp-icon").innerHTML = s === "pause"
+    ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+}
+function setLoading(on) {
+  document.getElementById("spinner-wrap").classList.toggle("show", on);
+  document.getElementById("play-pause-btn").style.visibility = on ? "hidden" : "";
+}
+function playAdjacent(dir) {
+  const list = currentList();
+  if (!list.length) return;
+  const idx = currentStation ? list.findIndex(s => s.url === currentStation.url) : -1;
+  const next = list[(idx + dir + list.length) % list.length];
+  const card = document.querySelector(`.station-card[data-url="${CSS.escape(next.url)}"]`);
+  playStation(next, card);
+}
+function currentList() {
+  const q = document.getElementById("search-input").value.toLowerCase().trim();
+  return STATIONS.filter(s => {
+    const matchCat = activeFilter === "All" || s.cat === activeFilter;
+    const matchQ   = !q || s.name.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+}
+function playRandom() {
+  const s = STATIONS[Math.floor(Math.random() * STATIONS.length)];
+  const card = document.querySelector(`.station-card[data-url="${CSS.escape(s.url)}"]`);
+  playStation(s, card); showToast("🎲 " + s.name);
+}
+
+/* ── VOLUME ── */
+const volSlider = document.getElementById("vol-slider");
+const savedVol  = parseInt(localStorage.getItem(LS_VOL) || "80");
+audio.volume = savedVol / 100; volSlider.value = savedVol; updateVolIcon();
+volSlider.addEventListener("input", e => {
+  audio.volume = e.target.value / 100; isMuted = audio.volume === 0;
+  localStorage.setItem(LS_VOL, e.target.value); updateVolIcon();
+});
+function toggleMute() {
+  if (isMuted || audio.volume === 0) { audio.volume = prevVol / 100; volSlider.value = prevVol; isMuted = false; }
+  else { prevVol = volSlider.value; audio.volume = 0; volSlider.value = 0; isMuted = true; }
+  updateVolIcon();
+}
+function changeVolume(delta) {
+  const nv = Math.min(100, Math.max(0, parseInt(volSlider.value) + delta));
+  audio.volume = nv / 100; volSlider.value = nv; isMuted = nv === 0;
+  localStorage.setItem(LS_VOL, nv); updateVolIcon(); showToast("🔊 " + nv + "%");
+}
+function updateVolIcon() {
+  const v = audio.volume;
+  const path = v === 0
+    ? '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>'
+    : v < 0.5
+    ? '<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>'
+    : '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+  document.getElementById("vol-icon").innerHTML = path;
+}
+
+/* ── FAVOURITES ── */
+function isFav(url) { return getFavs().includes(url); }
+function toggleFav(url) {
+  let favs = getFavs();
+  if (favs.includes(url)) { favs = favs.filter(f => f !== url); showToast("Removed from favourites"); }
+  else { favs.unshift(url); showToast("⭐ Added to favourites"); }
+  saveFavs(favs);
+  document.querySelectorAll(".station-fav-btn").forEach(btn => {
+    const u = btn.dataset.url;
+    btn.textContent = isFav(u) ? "★" : "☆";
+    btn.classList.toggle("faved", isFav(u));
+  });
+  updateFavBtn();
+}
+function toggleFavCurrent() { if (!currentStation) return; toggleFav(currentStation.url); }
+function updateFavBtn() {
+  const btn = document.getElementById("np-fav-btn");
+  if (!currentStation) { btn.textContent = "♡"; return; }
+  btn.textContent = isFav(currentStation.url) ? "♥" : "♡";
+  btn.style.color = isFav(currentStation.url) ? "var(--accent)" : "";
+}
+
+/* ── THEME ── */
+function toggleTheme() {
+  const el = document.documentElement;
+  const next = el.dataset.theme === "dark" ? "light" : "dark";
+  el.dataset.theme = next; localStorage.setItem(LS_THEME, next);
+  showToast(next === "dark" ? "🌙 Dark mode" : "☀️ Light mode");
+}
+const savedTheme = localStorage.getItem(LS_THEME);
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+
+/* ── SEARCH FOCUS (mobile bottom nav) ── */
+function focusSearch() {
+  document.getElementById("search-input").focus();
+  document.getElementById("main").scrollTop = 0;
+  setBnavActive("bnav-search");
+}
+
+/* ── SHARE ── */
+function shareStation() {
+  if (!currentStation) { showToast("Nothing playing yet"); return; }
+  const url = new URL(window.location.href);
+  url.searchParams.set("station", currentStation.url);
+  if (navigator.share) navigator.share({title:"Fluxio – " + currentStation.name, url: url.toString()}).catch(()=>{});
+  else navigator.clipboard.writeText(url.toString()).then(() => showToast("📋 Link copied!")).catch(() => showToast("📋 Copied!"));
+}
+
+/* ── CONTINUE BAR ── */
+function updateContinueBar() {
+  const lastUrl = localStorage.getItem(LS_LAST);
+  const bar = document.getElementById("continue-bar");
+  if (!bar) return;
+  if (!lastUrl) { bar.classList.add("hidden"); return; }
+  const s = STATIONS.find(x => x.url === lastUrl);
+  if (!s) { bar.classList.add("hidden"); return; }
+  const m = CAT_META[s.cat] || {emoji:"📻", grad:"#222"};
+  bar.classList.remove("hidden");
+  bar.querySelector(".continue-art").style.background = m.grad;
+  bar.querySelector(".continue-art").textContent = m.emoji;
+  bar.querySelector(".continue-name").textContent = s.name;
+  bar.onclick = () => playStation(s, document.querySelector(`.station-card[data-url="${CSS.escape(s.url)}"]`));
+}
+
+/* ── TOAST ── */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+/* ── SHORTCUTS ── */
+function showShortcuts()   { document.getElementById("shortcuts-modal").classList.add("open"); }
+function closeShortcuts(e) { if (!e || e.target === document.getElementById("shortcuts-modal")) document.getElementById("shortcuts-modal").classList.remove("open"); }
+
+/* ── KEYBOARD ── */
+document.addEventListener("keydown", e => {
+  const tag = document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+  switch(e.code) {
+    case "Space":      e.preventDefault(); togglePlay(); break;
+    case "ArrowRight": e.preventDefault(); playAdjacent(1); break;
+    case "ArrowLeft":  e.preventDefault(); playAdjacent(-1); break;
+    case "ArrowUp":    e.preventDefault(); changeVolume(5); break;
+    case "ArrowDown":  e.preventDefault(); changeVolume(-5); break;
+    case "KeyM":       e.preventDefault(); toggleMute(); break;
+    case "KeyF":       e.preventDefault(); toggleFavCurrent(); break;
+    case "KeyR":       e.preventDefault(); playRandom(); break;
+    case "KeyS":       e.preventDefault(); shareStation(); break;
+  }
+  if (e.key === "?") { e.preventDefault(); showShortcuts(); }
+  if (e.key === "/") { e.preventDefault(); document.getElementById("search-input").focus(); }
+});
+
+/* ── SCROLL TO ACTIVE ── */
+function scrollToActive() {
+  if (!currentStation) return;
+  const card = document.querySelector(`.station-card[data-url="${CSS.escape(currentStation.url)}"]`);
+  if (card) card.scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+/* ── BOTTOM NAV ACTIVE STATE ── */
+function setBnavActive(id) {
+  document.querySelectorAll(".bnav-item").forEach(b => b.classList.toggle("active", b.id === id));
+}
+
+/* ── NAVIGATION ── */
+function setNavActive(id) {
+  ["sb-home","sb-favs","sb-recent"].forEach(n => document.getElementById(n)?.classList.toggle("active", n === id));
+  const bnavMap = {"sb-home":"bnav-home","sb-favs":"bnav-favs","sb-recent":"bnav-recent"};
+  if (bnavMap[id]) setBnavActive(bnavMap[id]);
+}
+function navHome() {
+  activeFilter = "All"; activeMood = null;
+  document.getElementById("search-input").value = "";
+  setNavActive("sb-home"); setChipActive("All"); renderMain();
+  document.getElementById("main").scrollTop = 0;
+}
+function navFavs() {
+  setNavActive("sb-favs"); activeFilter = "__favs__"; activeMood = null;
+  document.getElementById("search-input").value = "";
+  setChipActive(null); renderMain();
+  document.getElementById("main").scrollTop = 0;
+}
+function navRecent() {
+  setNavActive("sb-recent"); activeFilter = "__recent__"; activeMood = null;
+  document.getElementById("search-input").value = "";
+  setChipActive(null); renderMain();
+  document.getElementById("main").scrollTop = 0;
+}
+function setFilter(cat) {
+  activeFilter = cat; activeMood = null;
+  document.getElementById("search-input").value = "";
+  setChipActive(cat);
+  document.querySelectorAll(".sb-playlist").forEach(x => x.classList.toggle("active", x.dataset.cat === cat));
+  setNavActive("sb-home"); renderMain();
+  document.getElementById("main").scrollTop = 0;
+}
+function setChipActive(cat) {
+  document.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c.dataset.cat === (cat || "")));
+}
+function setMood(mood) {
+  activeMood = mood; activeFilter = "All";
+  document.getElementById("search-input").value = "";
+  setChipActive(null); setNavActive("sb-home"); renderMain();
+  document.getElementById("main").scrollTop = 0;
+}
+
+/* ── SIDEBAR LIBRARY ── */
+function buildLibrary() {
+  const lib = document.getElementById("sb-library");
+  Object.entries(CAT_META).forEach(([cat, m]) => {
+    const cnt = STATIONS.filter(s => s.cat === cat).length;
+    const item = document.createElement("div");
+    item.className = "sb-playlist"; item.dataset.cat = cat;
+    item.innerHTML = `<div class="sb-playlist-art" style="background:${m.grad}">${m.emoji}</div><div class="sb-playlist-info"><div class="sb-playlist-name">${cat}</div><div class="sb-playlist-meta">${cnt} stations</div></div>`;
+    item.onclick = () => setFilter(cat);
+    lib.appendChild(item);
+  });
+}
+
+/* ── CHIPS ── */
+function buildChips() {
+  const row = document.getElementById("chips-row");
+  const allChip = document.createElement("button");
+  allChip.className = "chip active"; allChip.textContent = "All"; allChip.dataset.cat = "All";
+  allChip.onclick = () => setFilter("All"); row.appendChild(allChip);
+  Object.keys(CAT_META).forEach(cat => {
+    const c = document.createElement("button");
+    c.className = "chip"; c.textContent = cat; c.dataset.cat = cat;
+    c.onclick = () => setFilter(cat); row.appendChild(c);
+  });
+}
+
+/* ── MAKE CARD ── */
+function makeCard(station) {
+  const m = CAT_META[station.cat] || {emoji:"📻", grad:"#222"};
+  const isActive = currentStation && currentStation.url === station.url;
+  const faved = isFav(station.url);
+  const card = document.createElement("div");
+  card.className = "station-card" + (isActive ? " active" : "");
+  card.dataset.url = station.url;
+  const art = document.createElement("div");
+  art.className = "station-art"; art.style.background = m.grad;
+  art.innerHTML = `${m.emoji}
+    <button class="station-fav-btn ${faved?"faved":""}" data-url="${station.url}" title="Favourite" onclick="event.stopPropagation();toggleFav('${station.url.replace(/'/g,"\\'")}')">
+      ${faved?"★":"☆"}
+    </button>
+    <button class="station-play-btn" title="Play">
+      <svg viewBox="0 0 24 24">${isActive ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>' : '<path d="M8 5v14l11-7z"/>'}</svg>
+    </button>`;
+  card.appendChild(art);
+  const nameEl = document.createElement("div"); nameEl.className = "station-card-name"; nameEl.textContent = station.name; card.appendChild(nameEl);
+  const subEl  = document.createElement("div"); subEl.className  = "station-card-sub";  subEl.textContent  = "Live radio";  card.appendChild(subEl);
+  card.addEventListener("click", () => {
+    if (currentStation && currentStation.url === station.url) togglePlay();
+    else playStation(station, card);
+  });
+  return card;
+}
+
+/* ── RENDER MAIN ── */
+function renderMain() {
+  const content = document.getElementById("content");
+  const q = document.getElementById("search-input").value.toLowerCase().trim();
+  content.innerHTML = "";
+
+  if (activeFilter === "__favs__") {
+    const favList = STATIONS.filter(s => getFavs().includes(s.url));
+    content.appendChild(makeSecHeader("Your Favourites", favList.length + " stations"));
+    if (!favList.length) { content.innerHTML += `<div class="empty-state"><div class="big">⭐</div><p>No favourites yet. Star a station to save it here.</p></div>`; }
+    else { const g = document.createElement("div"); g.className="stations-grid"; favList.forEach(s => g.appendChild(makeCard(s))); content.appendChild(g); }
+    return;
+  }
+  if (activeFilter === "__recent__") {
+    const recent = getRecent();
+    content.appendChild(makeSecHeader("Recently Played", recent.length + " stations"));
+    if (!recent.length) { content.innerHTML += `<div class="empty-state"><div class="big">📻</div><p>Your listening history will appear here.</p></div>`; }
+    else { const g = document.createElement("div"); g.className="stations-grid"; recent.forEach(s => { const full = STATIONS.find(x => x.url === s.url) || s; g.appendChild(makeCard(full)); }); content.appendChild(g); }
+    return;
+  }
+  if (activeMood) {
+    const moodStations = activeMood.stations.map(n => STATIONS.find(s => s.name === n)).filter(Boolean);
+    content.appendChild(makeSecHeader(`${activeMood.emoji} ${activeMood.name} mode`, activeMood.desc));
+    const g = document.createElement("div"); g.className="stations-grid"; moodStations.forEach(s => g.appendChild(makeCard(s))); content.appendChild(g);
+    return;
+  }
+  if (q) {
+    const filtered = STATIONS.filter(s => s.name.toLowerCase().includes(q) || s.cat.toLowerCase().includes(q));
+    content.appendChild(makeSecHeader(`Results for "${document.getElementById("search-input").value}"`, filtered.length + " stations"));
+    if (!filtered.length) { content.innerHTML += `<div class="empty-state"><div class="big">📡</div><p>No stations match that search.</p></div>`; }
+    else { const g = document.createElement("div"); g.className="stations-grid"; filtered.forEach(s => g.appendChild(makeCard(s))); content.appendChild(g); }
+    return;
+  }
+  if (activeFilter !== "All") {
+    const list = STATIONS.filter(s => s.cat === activeFilter);
+    const m = CAT_META[activeFilter];
+    const hero = document.createElement("div");
+    hero.className = "genre-hero";
+    hero.style.cssText = `background:${m.grad};border-radius:var(--r);padding:32px 28px;margin-bottom:24px;display:flex;align-items:center;gap:20px;`;
+    hero.innerHTML = `<div class="emoji-big" style="font-size:56px">${m.emoji}</div><div><div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;opacity:.7;margin-bottom:4px">Genre</div><div class="title-big" style="font-size:32px;font-weight:900">${activeFilter}</div><div style="opacity:.7;margin-top:4px">${list.length} stations</div></div>`;
+    content.appendChild(hero);
+    const g = document.createElement("div"); g.className="stations-grid"; list.forEach(s => g.appendChild(makeCard(s))); content.appendChild(g);
+    return;
+  }
+
+  /* Home */
+  const continueBar = document.createElement("div");
+  continueBar.id = "continue-bar"; continueBar.className = "hidden";
+  continueBar.innerHTML = `<div class="continue-art">📻</div><div class="continue-text"><div class="continue-label">Continue listening</div><div class="continue-name"></div></div><button class="continue-play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>`;
+  content.appendChild(continueBar); updateContinueBar();
+
+  content.appendChild(makeSecHeader("Mood modes", ""));
+  const moodRow = document.createElement("div"); moodRow.className = "mood-row";
+  MOODS.forEach(mood => {
+    const card = document.createElement("div");
+    card.className = "mood-card"; card.style.background = mood.grad; card.style.color = "#fff";
+    card.innerHTML = `<div class="mood-name">${mood.name}</div><div class="mood-desc">${mood.desc}</div><div class="mood-emoji">${mood.emoji}</div>`;
+    card.onclick = () => setMood(mood); moodRow.appendChild(card);
+  });
+  content.appendChild(moodRow);
+
+  content.appendChild(makeSecHeader("Browse genres", ""));
+  const catGrid = document.createElement("div"); catGrid.className = "cat-grid";
+  Object.entries(CAT_META).forEach(([cat, m]) => {
+    const cnt = STATIONS.filter(s => s.cat === cat).length;
+    const tile = document.createElement("div");
+    tile.className = "cat-tile"; tile.style.background = m.grad; tile.style.color = "#fff";
+    tile.innerHTML = `<div class="cat-tile-name">${cat}</div><div class="cat-tile-count">${cnt} stations</div><div class="cat-tile-emoji">${m.emoji}</div>`;
+    tile.onclick = () => setFilter(cat); catGrid.appendChild(tile);
+  });
+  content.appendChild(catGrid);
+
+  Object.entries(CAT_META).forEach(([cat, m]) => {
+    const list = STATIONS.filter(s => s.cat === cat);
+    const wrap = document.createElement("div"); wrap.className = "sec-sep";
+    const hdr  = document.createElement("div"); hdr.className  = "sec-header";
+    hdr.innerHTML = `<div class="sec-title">${m.emoji} ${cat}</div><button class="sec-link" data-cat="${cat}">See all</button>`;
+    hdr.querySelector(".sec-link").onclick = () => setFilter(cat);
+    wrap.appendChild(hdr);
+    const g = document.createElement("div"); g.className = "stations-grid";
+    list.slice(0,8).forEach(s => g.appendChild(makeCard(s)));
+    wrap.appendChild(g); content.appendChild(wrap);
+  });
+}
+
+function makeSecHeader(title, sub) {
+  const wrap = document.createElement("div"); wrap.style.marginBottom = "14px";
+  wrap.innerHTML = `<div class="sec-title">${title}${sub ? ` <span style="font-size:14px;font-weight:400;color:var(--t2);margin-left:6px">${sub}</span>` : ""}</div>`;
+  return wrap;
+}
+
+/* ── SEARCH ── */
+document.getElementById("search-input").addEventListener("input", () => {
+  activeFilter = "All"; activeMood = null; setChipActive("All");
+  setBnavActive("bnav-search");
+  renderMain();
+});
+
+/* ── INIT ── */
+buildChips(); buildLibrary(); renderMain();
+const savedLastUrl = localStorage.getItem(LS_LAST);
+if (savedLastUrl) updateContinueBar();
+</script>
+</body>
+</html>

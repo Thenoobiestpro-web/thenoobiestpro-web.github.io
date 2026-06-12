@@ -1,0 +1,63 @@
+Fluxio — Features Summary
+
+Core functionality
+- Internet radio playback: plays live radio streams from many stations. (Implemented in app.js using the <audio> element)
+- Large curated station catalogue: dozens of stations grouped by category. (stations.js)
+- Category browsing: browse and filter stations by genre/category. (UI + app.js)
+- Mood modes: curated mood presets that map to station subsets (e.g., Chill, Upbeat, Classic). (stations.js + app.js)
+- Continue listening: resume the last-played station. (LocalStorage + UI in app.js)
+
+Controls & UX
+- Play / Pause, Previous / Next station controls. (app.js)
+- Shuffle (random station) button. (app.js)
+- Volume slider and mute toggle with icon updates. (app.js + style.css)
+- Station cards with play and favourite buttons; favourites persist in LocalStorage. (app.js + style.css)
+- Recently played list (history stored in LocalStorage). (app.js)
+- Search box to find stations by name or category. (index.html + app.js)
+- ‘Continue listening’ bar for quick resume. (app.js + style.css)
+- Share station via the Web Share API or clipboard fallback. (app.js)
+- Keyboard shortcuts for common actions (Space, Arrow keys, M, F, R, S, /, ?). (app.js)
+
+Visuals & Responsiveness
+- Responsive layout with desktop sidebar and mobile bottom navigation. (style.css + index.html)
+- Theme toggle (light/dark) persisted to LocalStorage. (app.js + style.css)
+- Station visualizer using Web Audio API (canvas drawing). (app.js)
+- Polished UI: hero cards, chips, mood/cards, live badges, toast messages. (style.css + index.html)
+
+PWA & Offline
+- Web App Manifest with icons and PWA meta (manifest.json + index.html).
+- Service Worker for offline caching of app shell and icons (sw.js).
+- Android install handling using beforeinstallprompt and install button (app.js + index.html).
+- iOS guidance: Apple touch icons and an in-app modal explaining "Add to Home Screen" (index.html + app.js).
+- Windows tile metadata via browserconfig.xml and msapplication meta tags in index.html.
+
+Data & Storage
+- Uses LocalStorage keys: fluxio_favs, fluxio_recent, fluxio_last, fluxio_vol, fluxio_theme. (app.js)
+- Station list and categories defined in a separate data file for easy edits (stations.js).
+
+Reliability & UX details
+- Audio error handling and auto-skip after repeated failures. (app.js)
+- Fade-in / fade-out audio transitions using Web Audio Gain node for smooth switching. (app.js)
+- Loading spinner and playback status indicators. (app.js + style.css)
+
+Files of interest
+- app.js — Main application logic (playback, UI, PWA hooks).
+- stations.js — Station catalogue, categories, moods.
+- index.html — UI structure, PWA meta, iOS modal.
+- style.css — Complete styling and responsive rules.
+- manifest.json — PWA manifest and icons.
+- sw.js — Service worker and cache list.
+- browserconfig.xml — Windows tile config.
+
+Notes / Next steps you might want
+- Confirm deployed Netlify URL serves these files over HTTPS (required for full PWA features).
+- Consider adding offline fallbacks for station streams (cached status pages) — live streams can’t be cached reliably.
+
+Recent additions (implemented):
+- Listening time tracking: per-station and per-day listening time is now recorded in LocalStorage (`fluxio_listen_times`, `fluxio_listen_days`). (app.js)
+- Listening statistics modal: view total listening hours, favourite genre, favourite station, and current listening streak. (index.html + app.js)
+- Smart recommendations: "Recommended for you" section on the Home view using a simple category-matching algorithm based on favourites and listening time. (app.js)
+- Sleep timer: choose 15/30/60 minutes to automatically fade out and pause playback. (index.html + app.js)
+- Media Session API integration: shows station metadata and enables play/pause/next/prev from lock screen and media controls where supported. (app.js)
+
+Generated on 2026-06-11
