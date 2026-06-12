@@ -374,7 +374,7 @@ input  { font-family: 'Inter', sans-serif; }
 }
 #play-pause-btn:hover { transform:scale(1.08); }
 #play-pause-btn svg { width:16px; height:16px; fill:currentColor; }
-#visualizer { width:120px; height:28px; flex-shrink:0; opacity:0; transition:opacity .4s; }
+#visualizer { width:140px; height:28px; flex-shrink:0; opacity:1; transition:opacity .6s; }
 #visualizer.active { opacity:1; }
 .progress-row { display:flex; align-items:center; gap:8px; width:100%; max-width:380px; }
 .prog-time { font-size:11px; color:var(--t2); width:30px; text-align:center; }
