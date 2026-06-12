@@ -6,6 +6,7 @@ let activeFilter = "All", activeMood = null;
 let prevVol = 80, isMuted = false, isPlaying = false, failCount = 0;
 let audioCtx = null, analyser = null, visSource = null, visFrame = null, fadeGain = null;
 let visFadeTarget = 1, visFadeLevel = 1, visLastData = null;
+let pauseHold = 0;
 
 const LS_FAV    = "fluxio_favs";
 const LS_RECENT = "fluxio_recent";
@@ -33,39 +34,99 @@ function setupVisualizer() {
 
 function drawVis() {
   const canvas = document.getElementById("visualizer");
-  if (!canvas) { visFrame = requestAnimationFrame(drawVis); return; }
+  if (!canvas) {
+    visFrame = requestAnimationFrame(drawVis);
+    return;
+  }
+
   const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0,0,W,H);
-  visFadeLevel += (visFadeTarget - visFadeLevel) * 0.05;
-  if (Math.abs(visFadeTarget - visFadeLevel) < 0.001) visFadeLevel = visFadeTarget;
-  const bars = 18, bw = W / bars - 1.5, gap = 1.5;
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const bars = 21;
+  const gap = 1.5;
+  const bw = W / bars - gap;
+
   const data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
-  if (analyser) analyser.getByteFrequencyData(data);
-  if (!visLastData || visLastData.length !== bars) visLastData = new Float32Array(bars).fill(0);
+
+  if (analyser) {
+    analyser.getByteFrequencyData(data);
+  }
+
+  if (!visLastData || visLastData.length !== bars) {
+    visLastData = new Float32Array(bars).fill(0);
+  }
+
+  if (typeof visFadeLevel === "undefined") {
+    visFadeLevel = 0;
+  }
+
+  let signalLevel = 0;
+
+  if (analyser && data) {
+    for (let i = 0; i < data.length; i++) {
+      signalLevel += data[i];
+    }
+    signalLevel /= data.length;
+  }
+
+  const isSilent = audio.paused || signalLevel < 3;
+
+if (audio.paused) {
+  pauseHold = Math.min(60, pauseHold + 1);
+} else {
+  pauseHold = 0;
+}
+
+const fadeSpeed = visFadeTarget > visFadeLevel ? 0.025 : 0.055;
+visFadeLevel += (visFadeTarget - visFadeLevel) * fadeSpeed;
+visFadeLevel = Math.max(0, Math.min(1, visFadeLevel));
+
   for (let i = 0; i < bars; i++) {
     const x = i * (bw + gap);
-    const pausedBase = 0.12 + (i % 3) * 0.02;
-    const liveLevel = analyser ? data[i] / 255 : 0;
-    if (!audio.paused && analyser) {
-      visLastData[i] = liveLevel;
-    } else {
-      visLastData[i] = Math.max(pausedBase, visLastData[i] * 0.94);
-    }
-    const rawLevel = audio.paused ? visLastData[i] : visLastData[i];
-    const normalized = (1 - visFadeLevel) * rawLevel + visFadeLevel * pausedBase;
-    const h = Math.max(2.5, normalized * H);
+
+    const liveLevel =
+      analyser && data[i] !== undefined
+        ? data[i] / 255
+        : 0;
+
+    let h;
+
+if (!isSilent) {
+  // Live audio
+  visLastData[i] = liveLevel;
+  h = Math.max(3, liveLevel * H);
+
+} else {
+  // Fade toward a soft segmented flatline
+const idleTarget = 0.05 + Math.sin(i * 0.9) * 0.025
+                 + Math.sin(i * 1.7) * 0.015;
+visLastData[i] += (idleTarget - visLastData[i]) * 0.035;
+h = Math.max(2, visLastData[i] * H);
+}
+
     const y = (H - h) / 2;
-    const width = bw * (0.96 - visFadeLevel * 0.25 + (audio.paused ? (i % 3) * 0.02 : 0));
-    const r = Math.round(255 * (1 - visFadeLevel) + 168 * visFadeLevel);
-    const g = Math.round(92 * (1 - visFadeLevel) + 168 * visFadeLevel);
-    const b = Math.round(0 * (1 - visFadeLevel) + 168 * visFadeLevel);
-    const alpha = 0.2 + (1 - visFadeLevel) * 0.4;
+
+const r = Math.round(255 * (1 - visFadeLevel) + 125 * visFadeLevel);
+const g = Math.round(92 * (1 - visFadeLevel) + 36 * visFadeLevel);
+const b = Math.round(0 * (1 - visFadeLevel) + 0 * visFadeLevel);
+
+    const alpha = 0.72 - visFadeLevel * 0.48;
+
     ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
-    ctx.beginPath(); ctx.roundRect(x, y, width, h, 2); ctx.fill();
+
+    ctx.beginPath();
+    ctx.roundRect(x, y, bw, h, bw / 2);
+    ctx.fill();
   }
+
   visFrame = requestAnimationFrame(drawVis);
 }
+
+console.log("drawVis running", audio.paused);
+visFrame = requestAnimationFrame(drawVis);
 
 /* ── FADE ── */
 function fadeIn(d=0.4) {
@@ -173,10 +234,11 @@ audio.addEventListener("playing", () => {
   if (!visFrame) drawVis();
 });
 audio.addEventListener("pause", () => {
-  isPlaying = false; setPlayIcon("play");
+  isPlaying = false;
+  setPlayIcon("play");
   document.getElementById("prog-fill").classList.remove("playing");
   document.getElementById("np-status").innerHTML = "Paused";
-  document.getElementById("visualizer").classList.remove("active");
+
   visFadeTarget = 1;
 });
 audio.addEventListener("waiting", () => setLoading(true));
