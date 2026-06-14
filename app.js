@@ -100,20 +100,17 @@ if (!isSilent) {
   h = Math.max(3, liveLevel * H);
 
 } else {
-  // Fade toward a soft segmented flatline
-const idleTarget = 0.05 + Math.sin(i * 0.9) * 0.025
-                 + Math.sin(i * 1.7) * 0.015;
-visLastData[i] += (idleTarget - visLastData[i]) * 0.035;
-h = Math.max(2, visLastData[i] * H);
+  // Flat line when paused — smoothly settle to a fixed low height
+  visLastData[i] += (0.03 - visLastData[i]) * 0.08;
+  h = Math.max(3, visLastData[i] * H);
 }
 
     const y = (H - h) / 2;
 
-const r = Math.round(255 * (1 - visFadeLevel) + 125 * visFadeLevel);
-const g = Math.round(92 * (1 - visFadeLevel) + 36 * visFadeLevel);
-const b = Math.round(0 * (1 - visFadeLevel) + 0 * visFadeLevel);
-
-    const alpha = 0.72 - visFadeLevel * 0.48;
+const r = Math.round(255 * (1 - visFadeLevel) + 200 * visFadeLevel);
+const g = Math.round(92  * (1 - visFadeLevel) + 70  * visFadeLevel);
+const b = Math.round(0   * (1 - visFadeLevel) + 0   * visFadeLevel);
+const alpha = 0.75 - visFadeLevel * 0.11;
 
     ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
 
