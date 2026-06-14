@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   style.css  –  FluxFM
+   style.css  –  Fluxio
    ══════════════════════════════════════════════════════ */
 
 /* ── CSS variables ── */
@@ -317,10 +317,31 @@ input  { font-family: 'Inter', sans-serif; }
    ══════════════════════════════════════════ */
 #player {
   grid-area: player; background: var(--player-bg);
-  border-top: 1px solid var(--border);
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; padding: 0 20px; gap: 12px;
+  border-top: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
   position: relative; z-index: 100; transition: background .3s;
+}
+
+.np-wrap {
+  flex: 1;
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+}
+
+.transport-wrap {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  top: 50%;
+  transform: translate(-50%, -41%);  /* centres both horizontally AND vertically */
+}
+
+.vol-wrap {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 10px;
 }
 .np-wrap { display:flex; align-items:center; gap:12px; min-width:0; }
 .np-art {
@@ -397,7 +418,32 @@ input  { font-family: 'Inter', sans-serif; }
 /* ══════════════════════════════════════════
    BOTTOM NAV  (mobile only)
    ══════════════════════════════════════════ */
-#bottom-nav {
+#player {
+  flex-wrap: wrap;  /* add this */
+}
+
+.progress-row {
+  width: 100%;
+  max-width: 100%;        /* override the 380px cap */
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.prog-track {
+  height: 3px;
+  background: var(--t3);
+  border-radius: 0;       /* sharp edges to sit flush */
+}
+
+.prog-fill {
+  background: var(--accent);
+}
+
+   #bottom-nav {
   display: none;
   grid-area: bottom-nav;
   background: var(--sidebar-bg);
