@@ -8,11 +8,6 @@ const ASSETS = [
   './manifest.json',
   './favicon.png',
   './logo.png',
-  './icons/android/launchericon-192x192.png',
-  './icons/android/launchericon-512x512.png',
-  './icons/ios/180.png',
-  './icons/ios/152.png',
-  './icons/ios/120.png',
   './browserconfig.xml'
 ];
 
