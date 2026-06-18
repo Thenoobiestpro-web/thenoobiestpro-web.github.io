@@ -1,4 +1,7 @@
 /* ── STATE ── */
+
+console.log("Welcome to Fluxio! Enjoy the music. 🎵");
+
 const audio = document.getElementById("radio");
 audio.crossOrigin = "anonymous";
 let currentStation = null, currentCardEl = null;
@@ -122,7 +125,6 @@ const alpha = 0.75 - visFadeLevel * 0.11;
   visFrame = requestAnimationFrame(drawVis);
 }
 
-console.log("drawVis running", audio.paused);
 visFrame = requestAnimationFrame(drawVis);
 
 /* ── FADE ── */
@@ -645,8 +647,7 @@ if (savedLastUrl) updateContinueBar();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('ServiceWorker registered:', reg.scope))
-      .catch(err => console.error('ServiceWorker registration failed:', err));
+    .catch(err => console.error('ServiceWorker registration failed:', err));
   });
 }
 
