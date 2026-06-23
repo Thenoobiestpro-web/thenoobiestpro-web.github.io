@@ -4,18 +4,33 @@ console.log("Welcome to Fluxio! Enjoy the music. 🎵");
 
 const audio = document.getElementById("radio");
 audio.crossOrigin = "anonymous";
+const ua = navigator.userAgent || "";
+const isSafari = (/^((?!chrome|android|crios|fxios|edgios|edga).)*safari/i.test(ua) && ua.includes("Safari")) ||
+  (/Version\//i.test(ua) && ua.includes("Safari") && !/(CriOS|FxiOS|Edg|OPR|Chrome)/i.test(ua));
+if (isSafari) document.documentElement.classList.add("safari-no-vis");
+const FULLSCREEN_QUOTES = [
+  { text: "Music gives a soul to the universe, wings to the mind.", author: "Plato" },
+  { text: "One good thing about music, when it hits you, you feel no pain.", author: "Bob Marley" },
+  { text: "Where words fail, music speaks.", author: "Hans Christian Andersen" },
+  { text: "Music is the strongest form of magic.", author: "Marilyn Manson" },
+  { text: "Life seems to go on without effort when I am filled with music.", author: "George Eliot" }
+];
 let currentStation = null, currentCardEl = null;
 let activeFilter = "All", activeMood = null;
 let prevVol = 80, isMuted = false, isPlaying = false, failCount = 0;
 let audioCtx = null, analyser = null, visSource = null, visFrame = null, fadeGain = null;
 let visFadeTarget = 1, visFadeLevel = 1, visLastData = null;
 let pauseHold = 0;
+let safariVisualizerToastShown = false;
+let sleepTimerMs = null, sleepTimerId = null;
+let listeningTime = {};
 
 const LS_FAV    = "fluxio_favs";
 const LS_RECENT = "fluxio_recent";
 const LS_LAST   = "fluxio_last";
 const LS_VOL    = "fluxio_vol";
 const LS_THEME  = "fluxio_theme";
+const LS_LISTEN = "fluxio_listening";
 
 const getFavs    = () => JSON.parse(localStorage.getItem(LS_FAV)    || "[]");
 const getRecent  = () => JSON.parse(localStorage.getItem(LS_RECENT) || "[]");
@@ -23,14 +38,28 @@ const saveFavs   = v  => localStorage.setItem(LS_FAV,    JSON.stringify(v));
 const saveRecent = v  => localStorage.setItem(LS_RECENT, JSON.stringify(v));
 /* ── VISUALIZER ── */
 function setupVisualizer() {
-  if (audioCtx) return;
+  if (audioCtx) {
+    // Safari (WebKit) frequently suspends the AudioContext — most notably
+    // it's created in a "suspended" state and never auto-resumes — so the
+    // analyser silently returns all-zero data and the bars never move.
+    if (audioCtx.state !== "running") {
+      audioCtx.resume().catch(() => {});
+    }
+    return;
+  }
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser(); analyser.fftSize = 64;
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 128;
     const source = audioCtx.createMediaElementSource(audio);
     fadeGain = audioCtx.createGain(); fadeGain.gain.value = 1;
     source.connect(fadeGain); fadeGain.connect(analyser); analyser.connect(audioCtx.destination);
     visSource = source;
+    // Explicitly resume right after creation — Safari requires this call to
+    // happen (and to be tied to the user gesture that triggered playback);
+    // other browsers no-op if already running.
+    if (audioCtx.state !== "running") {
+      audioCtx.resume().catch(() => {});
+    }
     if (!visFrame) drawVis();
   } catch(e) {}
 }
@@ -38,13 +67,31 @@ function setupVisualizer() {
 function drawVis() {
   const canvas = document.getElementById("visualizer");
   if (!canvas) {
-    visFrame = requestAnimationFrame(drawVis);
     return;
   }
 
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
+
+  // Helper: draw rounded rect path (fallback when ctx.roundRect isn't available)
+  function rectPath(ctx, x, y, w, h, r) {
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return;
+    }
+    const radius = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
 
   ctx.clearRect(0, 0, W, H);
 
@@ -69,13 +116,18 @@ function drawVis() {
   let signalLevel = 0;
 
   if (analyser && data) {
+    let maxVal = 0;
     for (let i = 0; i < data.length; i++) {
       signalLevel += data[i];
+      if (data[i] > maxVal) maxVal = data[i];
     }
     signalLevel /= data.length;
+    // Consider audio active if there's a significant peak even when average is low
+    var maxPeak = maxVal;
+    var isSilent = audio.paused || maxPeak < 8;
+  } else {
+    var isSilent = audio.paused;
   }
-
-  const isSilent = audio.paused || signalLevel < 3;
 
 if (audio.paused) {
   pauseHold = Math.min(60, pauseHold + 1);
@@ -90,10 +142,7 @@ visFadeLevel = Math.max(0, Math.min(1, visFadeLevel));
   for (let i = 0; i < bars; i++) {
     const x = i * (bw + gap);
 
-    const liveLevel =
-      analyser && data[i] !== undefined
-        ? data[i] / 255
-        : 0;
+    const liveLevel = analyser && data[i] !== undefined ? Math.pow(data[i] / 255, 1.05) : 0;
 
     let h;
 
@@ -117,8 +166,7 @@ const alpha = 0.75 - visFadeLevel * 0.11;
 
     ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
 
-    ctx.beginPath();
-    ctx.roundRect(x, y, bw, h, bw / 2);
+    rectPath(ctx, x, y, bw, h, bw / 2);
     ctx.fill();
   }
 
@@ -146,6 +194,7 @@ function fadeOut(d=0.3, cb) {
 /* ── PLAY ── */
 function playStation(station, cardEl, skipFade) {
   const doLoad = () => {
+    maybeShowSafariVisualizerToast();
     setupVisualizer();
     currentStation = station; currentCardEl = cardEl; failCount = 0;
     localStorage.setItem(LS_LAST, station.url);
@@ -173,6 +222,11 @@ function playStation(station, cardEl, skipFade) {
     }
     document.getElementById("np-status").innerHTML = "Connecting…";
     updateFavBtn(); setPlayIcon("pause"); setLoading(true);
+    if (fullscreenModal) {
+      updateFullscreenNowPlayingContents(station);
+      updateFullscreenPlayButton(true);
+    }
+    updateMediaSession();
     document.querySelectorAll(".station-card").forEach(c => {
       c.classList.toggle("active", c.dataset.url === station.url);
       const pb = c.querySelector(".station-play-btn svg");
@@ -198,6 +252,7 @@ function updateNpNameScroll() {
   if (!nameEl) return;
   const nameInner = nameEl.querySelector(".np-name-inner");
   const nameText = nameEl.querySelector(".np-name-text:not(.np-name-clone)");
+  const nameClone = nameEl.querySelector(".np-name-clone");
   if (!nameInner || !nameText) return;
 
   const containerWidth = nameEl.clientWidth;
@@ -209,12 +264,12 @@ function updateNpNameScroll() {
     nameInner.style.setProperty("--np-name-scroll-width", `${scrollWidth}px`);
     const duration = Math.max(8, scrollWidth / 28);
     nameInner.style.animation = `${duration}s linear infinite np-name-scroll`;
-    nameClone.style.display = "inline-block";
+    if (nameClone) nameClone.style.display = "inline-block";
     nameEl.classList.add("marquee");
   } else {
     nameEl.classList.remove("marquee");
     nameInner.style.animation = "none";
-    nameClone.style.display = "none";
+    if (nameClone) nameClone.style.display = "none";
   }
 }
 
@@ -226,6 +281,10 @@ window.addEventListener("resize", () => {
 /* ── AUDIO EVENTS ── */
 audio.addEventListener("playing", () => {
   isPlaying = true; setLoading(false); setPlayIcon("pause");
+  if (fullscreenModal) {
+    updateFullscreenNowPlayingContents(currentStation);
+    updateFullscreenPlayButton(true);
+  }
   document.getElementById("prog-fill").classList.add("playing");
   document.getElementById("np-status").innerHTML = `<span class="live-dot"></span> <span class="live-badge">LIVE</span>`;
   document.getElementById("visualizer").classList.add("active");
@@ -235,6 +294,7 @@ audio.addEventListener("playing", () => {
 audio.addEventListener("pause", () => {
   isPlaying = false;
   setPlayIcon("play");
+  if (fullscreenModal) updateFullscreenPlayButton();
   document.getElementById("prog-fill").classList.remove("playing");
   document.getElementById("np-status").innerHTML = "Paused";
 
@@ -252,19 +312,86 @@ audio.addEventListener("canplay", () => setLoading(false));
 /* ── CONTROLS ── */
 function togglePlay() {
   if (!audio.src) return;
+  const willPlay = audio.paused;
   if (audio.paused) {
+    if (audioCtx && audioCtx.state !== "running") audioCtx.resume().catch(() => {});
     visFadeTarget = 0;
-    audio.play().catch(()=>{}); fadeIn(0.3);
+    audio.play().catch(()=>{});
+    fadeIn(0.3);
   } else {
     visFadeTarget = 1;
     fadeOut(0.2, () => audio.pause());
   }
+  if (fullscreenModal) updateFullscreenPlayButton(willPlay);
 }
 
-function setPlayIcon(s) {
-  document.getElementById("pp-icon").innerHTML = s === "pause"
+function animatePlayPauseButton(btn) {
+  if (!btn) return;
+  btn.classList.remove("play-pause-transition");
+  void btn.offsetWidth;
+  btn.classList.add("play-pause-transition");
+}
+
+function setPlayIcon(s, animate = false) {
+  const icon = document.getElementById("pp-icon");
+  if (!icon) return;
+  icon.innerHTML = s === "pause"
     ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>'
     : '<path d="M8 5v14l11-7z"/>';
+  if (animate) animatePlayPauseButton(document.getElementById("play-pause-btn"));
+}
+
+function updateFullscreenPlayButton(forceState) {
+  if (!fullscreenModal) return;
+  const btn = fullscreenModal.querySelector(".fullscreen-pp-btn");
+  if (!btn) return;
+  const playing = typeof forceState === "boolean" ? forceState : isPlaying;
+  if (btn.textContent !== (playing ? "⏸" : "▶")) {
+    btn.textContent = playing ? "⏸" : "▶";
+    btn.classList.remove("play-pause-transition");
+    void btn.offsetWidth;
+    btn.classList.add("play-pause-transition");
+  }
+}
+
+function getFullscreenQuote() {
+  return FULLSCREEN_QUOTES[Math.floor(Math.random() * FULLSCREEN_QUOTES.length)];
+}
+
+function updateFullscreenQuote() {
+  if (!fullscreenModal) return;
+
+  const quoteEl = fullscreenModal.querySelector(".fullscreen-quote");
+  if (!quoteEl) return;
+
+  const quoteText = quoteEl.querySelector(".quote-text");
+  const quoteAuthor = quoteEl.querySelector(".quote-author");
+  if (!quoteText || !quoteAuthor) return;
+
+  const quote = getFullscreenQuote();
+  quoteText.textContent = quote.text;
+  quoteAuthor.textContent = `~ ${quote.author}`;
+  quoteText.style.setProperty("--chars", quote.text.length);
+
+  quoteText.classList.remove("typing");
+  void quoteText.offsetWidth;
+  quoteText.classList.add("typing");
+}
+
+function startQuoteRotation() {
+  stopQuoteRotation();
+  updateFullscreenQuote();
+  quoteInterval = setInterval(() => {
+    if (!fullscreenModal) return;
+    updateFullscreenQuote();
+  }, QUOTE_CHANGE_TIME);
+}
+
+function stopQuoteRotation() {
+  if (quoteInterval) {
+    clearInterval(quoteInterval);
+    quoteInterval = null;
+  }
 }
 
 function setLoading(on) {
@@ -279,6 +406,10 @@ function playAdjacent(dir) {
   const next = list[(idx + dir + list.length) % list.length];
   const card = document.querySelector(`.station-card[data-url="${CSS.escape(next.url)}"]`);
   playStation(next, card);
+  if (fullscreenModal) {
+    updateFullscreenNowPlayingContents(next);
+    updateFullscreenPlayButton(true);
+  }
 }
 
 function currentList() {
@@ -345,13 +476,122 @@ function toggleFav(url) {
   updateFavBtn();
 }
 
-function toggleFavCurrent() { if (!currentStation) return; toggleFav(currentStation.url); }
+function toggleFavCurrent(e) { if (e && e.stopPropagation) e.stopPropagation(); if (!currentStation) return; toggleFav(currentStation.url); }
 
 function updateFavBtn() {
   const btn = document.getElementById("np-fav-btn");
   if (!currentStation) { btn.textContent = "♡"; return; }
   btn.textContent = isFav(currentStation.url) ? "♥" : "♡";
   btn.style.color = isFav(currentStation.url) ? "var(--accent)" : "";
+}
+
+let fullscreenModal = null;
+let quoteInterval = null;
+
+// Optional: change quote every X seconds
+const QUOTE_CHANGE_TIME = 10000; // 10 seconds
+function closeFullscreenNowPlaying() {
+  if (!fullscreenModal) return;
+
+  stopQuoteRotation();
+
+  fullscreenModal.remove();
+  fullscreenModal = null;
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.().catch(() => {});
+  }
+}
+
+function showFullscreenNowPlaying() {
+  if (!currentStation) return;
+  if (fullscreenModal) return;
+  const m = CAT_META[currentStation.cat] || {emoji:"📻", grad:"#222"};
+  const modal = document.createElement("div");
+  modal.className = "fullscreen-modal";
+  
+  const closeBtn = document.createElement("div");
+  closeBtn.className = "fullscreen-close";
+  closeBtn.textContent = "✕";
+  closeBtn.onclick = (e) => { e.stopPropagation(); closeFullscreenNowPlaying(); };
+  
+  const artwork = document.createElement("div");
+  artwork.className = "fullscreen-artwork";
+  artwork.textContent = m.emoji;
+  artwork.style.background = m.grad;
+  
+  const title = document.createElement("div");
+  title.className = "fullscreen-title";
+  title.textContent = currentStation.name;
+  
+  const category = document.createElement("div");
+  category.className = "fullscreen-category";
+  category.textContent = currentStation.cat;
+  
+  const controls = document.createElement("div");
+  controls.className = "fullscreen-controls";
+  
+  const prevBtn = document.createElement("button");
+  prevBtn.className = "fullscreen-control-btn";
+  prevBtn.textContent = "⏮";
+  prevBtn.onclick = (e) => { e.stopPropagation(); playAdjacent(-1); };
+  
+  const ppBtn = document.createElement("button");
+  ppBtn.className = "fullscreen-pp-btn fullscreen-control-btn";
+  ppBtn.textContent = isPlaying ? "⏸" : "▶";
+  ppBtn.onclick = (e) => {
+    e.stopPropagation();
+    const willPlay = audio.paused;
+    togglePlay();
+    updateFullscreenPlayButton(willPlay);
+  };
+  
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "fullscreen-control-btn";
+  nextBtn.textContent = "⏭";
+  nextBtn.onclick = (e) => { e.stopPropagation(); playAdjacent(1); };
+  
+  controls.appendChild(prevBtn);
+  controls.appendChild(ppBtn);
+  controls.appendChild(nextBtn);
+
+  const visualizerWrap = document.createElement("div");
+  visualizerWrap.className = "fullscreen-visualizer-wrap";
+  visualizerWrap.appendChild(artwork);
+  visualizerWrap.appendChild(controls);
+  
+  modal.onclick = (e) => { if (e.target === modal) closeFullscreenNowPlaying(); };
+  modal.appendChild(closeBtn);
+  modal.appendChild(visualizerWrap);
+  modal.appendChild(title);
+  modal.appendChild(category);
+
+  const quote = document.createElement("div");
+  quote.className = "fullscreen-quote";
+  quote.innerHTML = '<span class="quote-text"></span><span class="quote-author"></span>';
+  modal.appendChild(quote);
+
+  document.body.appendChild(modal);
+  fullscreenModal = modal;
+
+startQuoteRotation();
+
+  if (modal.requestFullscreen) {
+    modal.requestFullscreen().catch(() => {});
+  }
+}
+
+function updateFullscreenNowPlayingContents(station) {
+  if (!fullscreenModal || !station) return;
+  const m = CAT_META[station.cat] || {emoji:"📻", grad:"#222"};
+  const artwork = fullscreenModal.querySelector(".fullscreen-artwork");
+  const title = fullscreenModal.querySelector(".fullscreen-title");
+  const category = fullscreenModal.querySelector(".fullscreen-category");
+  if (artwork) {
+    artwork.textContent = m.emoji;
+    artwork.style.background = m.grad;
+  }
+  if (title) title.textContent = station.name;
+  if (category) category.textContent = station.cat;
 }
 
 /* ── THEME ── */
@@ -363,6 +603,63 @@ function toggleTheme() {
 }
 const savedTheme = localStorage.getItem(LS_THEME);
 if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+
+/* ── SLEEP TIMER ── */
+function setSleepTimer(minutes) {
+  clearSleepTimer();
+  sleepTimerMs = minutes * 60 * 1000;
+  sleepTimerId = setTimeout(() => {
+    audio.pause();
+    visFadeTarget = 1;
+    isPlaying = false;
+    setPlayIcon("play");
+    showToast("😴 Sleep timer ended");
+  }, sleepTimerMs);
+  showToast("⏱️ Sleep timer set for " + minutes + " min");
+}
+
+function clearSleepTimer() {
+  if (sleepTimerId) {
+    clearTimeout(sleepTimerId);
+    sleepTimerId = null;
+    sleepTimerMs = null;
+    showToast("⏱️ Sleep timer cancelled");
+  }
+}
+
+function showSleepTimerModal() {
+  const modal = document.createElement("div");
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;";
+  modal.onclick = (e) => e.target === modal && modal.remove();
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:320px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="font-size:18px;font-weight:800;margin-bottom:20px;">Sleep Timer</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <button onclick="setSleepTimer(5);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">5 min</button>
+        <button onclick="setSleepTimer(15);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">15 min</button>
+        <button onclick="setSleepTimer(30);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">30 min</button>
+        <button onclick="setSleepTimer(60);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">1 hour</button>
+      </div>
+      <button onclick="clearSleepTimer();document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-weight:700;cursor:pointer;">Cancel Timer</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+/* ── MEDIA SESSION API ── */
+function updateMediaSession() {
+  if (!("mediaSession" in navigator) || !currentStation) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: currentStation.name,
+    artist: "Live Radio",
+    album: CAT_META[currentStation.cat]?.emoji || "📻",
+    artwork: [{src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect fill='%23ff5c00' width='96' height='96'/%3E%3Ctext x='48' y='60' font-size='48' text-anchor='middle' fill='%23fff'%3E📻%3C/text%3E%3C/svg%3E", sizes: "96x96", type: "image/svg+xml"}]
+  });
+  navigator.mediaSession.setActionHandler("play", () => audio.play());
+  navigator.mediaSession.setActionHandler("pause", () => audio.pause());
+  navigator.mediaSession.setActionHandler("nexttrack", () => playAdjacent(1));
+  navigator.mediaSession.setActionHandler("previoustrack", () => playAdjacent(-1));
+}
 
 /* ── SEARCH FOCUS (mobile bottom nav) ── */
 function focusSearch() {
@@ -398,6 +695,27 @@ function updateContinueBar() {
 
 /* ── TOAST ── */
 let toastTimer;
+
+// Ensure audio context and visualizer are started after a user gesture
+function ensureAudioPermission() {
+  function resume() {
+    try {
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      setupVisualizer();
+      // Try to start playback on first user gesture (Safari requires explicit play)
+      try { if (audio && audio.src && audio.paused) audio.play().catch(()=>{}); } catch(e) {}
+    } catch(e) { /* ignore */ }
+  }
+  ['click','keydown','touchstart'].forEach(e => document.addEventListener(e, resume, {once:true}));
+}
+
+ensureAudioPermission();
+function maybeShowSafariVisualizerToast() {
+  if (!isSafari || safariVisualizerToastShown) return;
+  safariVisualizerToastShown = true;
+  showToast("Visualizer unavailable for Safari");
+}
+
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg; t.classList.add("show");
@@ -534,8 +852,12 @@ function makeCard(station) {
   const nameEl = document.createElement("div"); nameEl.className = "station-card-name"; nameEl.textContent = station.name; card.appendChild(nameEl);
   const subEl  = document.createElement("div"); subEl.className  = "station-card-sub";  subEl.textContent  = "Live radio";  card.appendChild(subEl);
   card.addEventListener("click", () => {
-    if (currentStation && currentStation.url === station.url) togglePlay();
-    else playStation(station, card);
+    if (currentStation && currentStation.url === station.url) {
+      togglePlay();
+    } else {
+      playStation(station, card);
+      maybeShowSafariVisualizerToast();
+    }
   });
   return card;
 }
