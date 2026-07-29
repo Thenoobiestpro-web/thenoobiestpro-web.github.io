@@ -52,8 +52,18 @@
       <span class="search-icon">⌕</span>
       <input id="search-input" placeholder="Search stations…" autocomplete="off" spellcheck="false">
     </div>
-<span style="font-size:12px; font-weight:100; color:var(--t3); white-space:nowrap;">Fluxio v2.17</span>
+<span style="font-size:12px; font-weight:100; color:var(--t3); white-space:nowrap;">Fluxio v2.18</span>
     <div class="topbar-actions">
+      <button class="icon-btn" onclick="showListeningStats()" title="Listening stats">
+        <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+      </button>
+      <input type="file" id="import-favs-input" accept="application/json" style="display:none" onchange="importFavourites(this.files[0])">
+      <button class="icon-btn" onclick="exportFavourites()" title="Export favourites">
+        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18v10.17l3.59-3.58L17 10l-5 5-5-5 1.41-1.41L11 12.17V2h1z"/></svg>
+      </button>
+      <button class="icon-btn" onclick="document.getElementById('import-favs-input').click()" title="Import favourites">
+        <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM12 2 7 7l1.41 1.41L11 5.83V16h2V5.83l2.59 2.58L17 7z"/></svg>
+      </button>
       <button class="random-btn" onclick="playRandom()" title="Shuffle">
         <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
         <span class="btn-label">Shuffle</span>
@@ -161,6 +171,7 @@
 
 <div id="toast"></div>
 <audio id="radio" preload="none" playsinline crossorigin="anonymous"></audio>
+<audio id="radio2" preload="none" playsinline crossorigin="anonymous" style="display:none"></audio>
 
 
 <!-- iOS Install modal -->
