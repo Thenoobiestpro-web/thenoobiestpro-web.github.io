@@ -8,13 +8,6 @@ const ua = navigator.userAgent || "";
 const isSafari = (/^((?!chrome|android|crios|fxios|edgios|edga).)*safari/i.test(ua) && ua.includes("Safari")) ||
   (/Version\//i.test(ua) && ua.includes("Safari") && !/(CriOS|FxiOS|Edg|OPR|Chrome)/i.test(ua));
 if (isSafari) document.documentElement.classList.add("safari-no-vis");
-const FULLSCREEN_QUOTES = [
-  { text: "Music gives a soul to the universe, wings to the mind.", author: "Plato" },
-  { text: "One good thing about music, when it hits you, you feel no pain.", author: "Bob Marley" },
-  { text: "Where words fail, music speaks.", author: "Hans Christian Andersen" },
-  { text: "Music is the strongest form of magic.", author: "Marilyn Manson" },
-  { text: "Life seems to go on without effort when I am filled with music.", author: "George Eliot" }
-];
 let currentStation = null, currentCardEl = null;
 let activeFilter = "All", activeMood = null;
 let prevVol = 80, isMuted = false, isPlaying = false, failCount = 0;
