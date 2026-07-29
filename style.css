@@ -531,44 +531,6 @@ input  { font-family: 'Inter', sans-serif; }
   margin-bottom:28px;
   overflow:visible;
 }
-.fullscreen-quote {
-  width:min(84vw, 520px);
-  max-width:520px;
-  padding:18px 22px;
-  margin-top:18px;
-  border-radius:36px;
-  background:rgba(24, 28, 34, 0.68);
-  border:1px solid rgba(255,255,255,0.08);
-  color:rgba(235,235,235,0.74);
-  font-size:15px;
-  font-style:italic;
-  text-align:center;
-  line-height:1.7;
-  letter-spacing:0.02em;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  box-shadow:0 18px 40px rgba(0,0,0,0.24);
-}
-.fullscreen-quote .quote-text {
-  display:block;
-  overflow:hidden;
-  white-space:normal;
-  max-width:100%;
-  opacity:0;
-  transform:translateY(6px);
-}
-
-.fullscreen-quote .typing {
-  animation: quoteFadeIn 1.2s ease forwards;
-}
-
-.fullscreen-quote .quote-author {
-  font-size:13px;
-  color:rgba(255,255,255,0.62);
-  letter-spacing:0.04em;
-  align-self:flex-end;
-}
 @keyframes quoteFadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
