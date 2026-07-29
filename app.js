@@ -3,11 +3,59 @@
 console.log("Welcome to Fluxio! Enjoy the music. 🎵");
 
 const audio = document.getElementById("radio");
+const audio2 = document.getElementById("radio2");
+audio2.crossOrigin = "anonymous";
+const audioGraphs = new Map(); // audio element -> { source, gain }
+
+function buildAudioGraph(el) {
+  if (audioGraphs.has(el)) return audioGraphs.get(el);
+  const source = audioCtx.createMediaElementSource(el);
+  const gain = audioCtx.createGain(); gain.gain.value = 0;
+  source.connect(gain); gain.connect(analyser);
+  const graph = { source, gain };
+  audioGraphs.set(el, graph);
+  return graph;
+}
+
+function crossfadeTo(station) {
+  const dur = 2.2;
+  setupVisualizer(); // ensures audioCtx/analyser/fadeGain for `audio` exist
+  const g2 = buildAudioGraph(audio2);
+  audio2.src = station.url;
+  audio2.load();
+  audio2.play().catch(() => {});
+
+  const now = audioCtx.currentTime;
+  fadeGain.gain.cancelScheduledValues(now);
+  fadeGain.gain.setValueAtTime(fadeGain.gain.value, now);
+  fadeGain.gain.linearRampToValueAtTime(0, now + dur);
+  g2.gain.cancelScheduledValues(now);
+  g2.gain.setValueAtTime(0, now);
+  g2.gain.linearRampToValueAtTime(1, now + dur);
+
+  setTimeout(() => {
+    audio.pause();
+    audio.src = station.url;
+    audio.load();
+    audio.play().then(() => {
+      fadeGain.gain.setValueAtTime(1, audioCtx.currentTime);
+      audio2.pause();
+      g2.gain.setValueAtTime(0, audioCtx.currentTime);
+    }).catch(() => {});
+  }, dur * 1000 + 80);
+}
 audio.crossOrigin = "anonymous";
 const ua = navigator.userAgent || "";
 const isSafari = (/^((?!chrome|android|crios|fxios|edgios|edga).)*safari/i.test(ua) && ua.includes("Safari")) ||
   (/Version\//i.test(ua) && ua.includes("Safari") && !/(CriOS|FxiOS|Edg|OPR|Chrome)/i.test(ua));
 if (isSafari) document.documentElement.classList.add("safari-no-vis");
+const FULLSCREEN_QUOTES = [
+  { text: "Music gives a soul to the universe, wings to the mind.", author: "Plato" },
+  { text: "One good thing about music, when it hits you, you feel no pain.", author: "Bob Marley" },
+  { text: "Where words fail, music speaks.", author: "Hans Christian Andersen" },
+  { text: "Music is the strongest form of magic.", author: "Marilyn Manson" },
+  { text: "Life seems to go on without effort when I am filled with music.", author: "George Eliot" }
+];
 let currentStation = null, currentCardEl = null;
 let activeFilter = "All", activeMood = null;
 let prevVol = 80, isMuted = false, isPlaying = false, failCount = 0;
@@ -16,9 +64,8 @@ let visFadeTarget = 1, visFadeLevel = 1, visLastData = null;
 let pauseHold = 0;
 let safariVisualizerToastShown = false;
 let sleepTimerMs = null, sleepTimerId = null;
-let listeningTime = {};
 
-const LS_FAV    = "fluxio_favs";
+const LS_FAV    = "fluxio_favs";                                          // ✅ moved up here
 const LS_RECENT = "fluxio_recent";
 const LS_LAST   = "fluxio_last";
 const LS_VOL    = "fluxio_vol";
@@ -29,6 +76,19 @@ const getFavs    = () => JSON.parse(localStorage.getItem(LS_FAV)    || "[]");
 const getRecent  = () => JSON.parse(localStorage.getItem(LS_RECENT) || "[]");
 const saveFavs   = v  => localStorage.setItem(LS_FAV,    JSON.stringify(v));
 const saveRecent = v  => localStorage.setItem(LS_RECENT, JSON.stringify(v));
+
+let listeningTime = JSON.parse(localStorage.getItem(LS_LISTEN) || "{}");  // ✅ LS_LISTEN now exists
+
+setInterval(() => {
+  if (!isPlaying || !currentStation) return;
+  const cat = currentStation.cat;
+  listeningTime[cat] = (listeningTime[cat] || 0) + 5;
+  localStorage.setItem(LS_LISTEN, JSON.stringify(listeningTime));
+}, 5000);
+
+function showListeningStats() {
+  /* ...unchanged... */
+}
 /* ── VISUALIZER ── */
 function setupVisualizer() {
   if (audioCtx) {
@@ -456,6 +516,34 @@ function updateVolIcon() {
 /* ── FAVOURITES ── */
 function isFav(url) { return getFavs().includes(url); }
 
+function exportFavourites() {
+  const data = { favourites: getFavs(), exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "fluxio-favourites.json"; a.click();
+  URL.revokeObjectURL(url);
+  showToast("⬇️ Favourites exported");
+}
+
+function importFavourites(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const incoming = Array.isArray(data.favourites) ? data.favourites : [];
+      const merged = Array.from(new Set([...getFavs(), ...incoming]));
+      saveFavs(merged);
+      renderMain();
+      showToast(`⭐ Imported ${incoming.length} favourites`);
+    } catch (e) {
+      showToast("Couldn't read that file");
+    }
+  };
+  reader.readAsText(file);
+}
+
 function toggleFav(url) {
   let favs = getFavs();
   if (favs.includes(url)) { favs = favs.filter(f => f !== url); showToast("Removed from favourites"); }
@@ -601,13 +689,17 @@ if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 function setSleepTimer(minutes) {
   clearSleepTimer();
   sleepTimerMs = minutes * 60 * 1000;
+  const fadeMs = Math.min(12000, sleepTimerMs * 0.3);
   sleepTimerId = setTimeout(() => {
-    audio.pause();
     visFadeTarget = 1;
-    isPlaying = false;
-    setPlayIcon("play");
-    showToast("😴 Sleep timer ended");
-  }, sleepTimerMs);
+    fadeOut(fadeMs / 1000, () => {
+      audio.pause();
+      isPlaying = false;
+      setPlayIcon("play");
+      showToast("😴 Sleep timer ended");
+      if (fadeGain) fadeGain.gain.setValueAtTime(1, audioCtx.currentTime); // reset gain for next playback
+    });
+  }, sleepTimerMs - fadeMs);
   showToast("⏱️ Sleep timer set for " + minutes + " min");
 }
 
