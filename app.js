@@ -159,7 +159,7 @@ function drawVis() {
       signalLevel += data[i];
       if (data[i] > maxVal) maxVal = data[i];
     }
-    signalLevel /= data.length/
+    signalLevel /= data.length;
     var maxPeak = maxVal;
     var isSilent = audio.paused || maxPeak < 8;
   } else {
@@ -699,12 +699,12 @@ function showSleepTimerModal() {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:320px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
       <div style="font-size:18px;font-weight:800;margin-bottom:20px;">Sleep Timer</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
-        <button onclick="setSleepTimer(5);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">5 min</button>
-        <button onclick="setSleepTimer(15);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">15 min</button>
-        <button onclick="setSleepTimer(30);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">30 min</button>
-        <button onclick="setSleepTimer(60);document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">1 hour</button>
+        <button onclick="setSleepTimer(5);document.querySelectorAll('div[style*=\\'position:fixed\\']').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">5 min</button>
+        <button onclick="setSleepTimer(15);document.querySelectorAll('div[style*=\\'position:fixed\\']').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">15 min</button>
+        <button onclick="setSleepTimer(30);document.querySelectorAll('div[style*=\\'position:fixed\\']').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">30 min</button>
+        <button onclick="setSleepTimer(60);document.querySelectorAll('div[style*=\\'position:fixed\\']').forEach(m=>m.remove());" style="padding:10px;background:var(--t1);color:var(--bg);border:none;border-radius:8px;font-weight:700;cursor:pointer;">1 hour</button>
       </div>
-      <button onclick="clearSleepTimer();document.querySelectorAll('div[style*=position:fixed]').forEach(m=>m.remove());" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-weight:700;cursor:pointer;">Cancel Timer</button>
+      <button onclick="clearSleepTimer();document.querySelectorAll('div[style*=\\'position:fixed\\']').forEach(m=>m.remove());" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-weight:700;cursor:pointer;">Cancel Timer</button>
     </div>
   `;
   document.body.appendChild(modal);
