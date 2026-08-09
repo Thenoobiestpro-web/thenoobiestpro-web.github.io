@@ -149,3 +149,18 @@ const MOODS = [
   {name:"News",    desc:"Stay informed",        emoji:"📡", grad:"linear-gradient(135deg,#0c1a2e,#1e3a5f)",
    stations:["LBC UK","LBC London","LBC News UK","LBC News London"]},
 ];
+
+/* ── FULLSCREEN QUOTES ── */
+const QUOTE_CHANGE_TIME = 8000; // ms between quote changes in fullscreen now-playing view
+const FULLSCREEN_QUOTES = [
+  {text:"Music is the strongest form of magic.",                       author:"Marilyn Manson"},
+  {text:"Where words fail, music speaks.",                             author:"Hans Christian Andersen"},
+  {text:"One good thing about music, when it hits you feel no pain.",  author:"Bob Marley"},
+  {text:"Music can change the world because it can change people.",    author:"Bono"},
+  {text:"Without music, life would be a mistake.",                     author:"Friedrich Nietzsche"},
+  {text:"Music is the universal language of mankind.",                 author:"Henry Wadsworth Longfellow"},
+  {text:"Music gives a soul to the universe.",                         author:"Plato"},
+  {text:"Music washes away the dust of everyday life.",                author:"Berthold Auerbach"},
+  {text:"Life seems to go on without effort when I am filled with music.", author:"George Eliot"},
+  {text:"Music expresses that which cannot be said.",                  author:"Victor Hugo"},
+];
