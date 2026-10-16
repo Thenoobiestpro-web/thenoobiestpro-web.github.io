@@ -574,6 +574,43 @@ input  { font-family: 'Inter', sans-serif; }
 }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+.cache-warning-modal {
+  position:fixed; inset:0; z-index:12000; display:flex;
+  align-items:center; justify-content:center; padding:20px;
+  background:rgba(0,0,0,.66); backdrop-filter:blur(8px);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.cache-warning-modal.open { opacity:1; pointer-events:auto; }
+.cache-warning-card {
+  width:min(100%,420px); padding:26px; border:1px solid var(--border);
+  border-radius:20px; background:var(--surface); color:var(--t1);
+  box-shadow:0 24px 70px rgba(0,0,0,.4);
+  transform:translateY(8px); transition:transform .2s ease;
+}
+.cache-warning-modal.open .cache-warning-card { transform:translateY(0); }
+.cache-warning-icon {
+  width:42px; height:42px; margin-bottom:16px; display:grid; place-items:center;
+  border-radius:13px; background:rgba(255,92,0,.14); color:var(--accent);
+  font-size:23px; font-weight:800;
+}
+.cache-warning-eyebrow { color:var(--accent); font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.cache-warning-card h2 { margin:7px 0 10px; font-size:20px; line-height:1.25; }
+.cache-warning-card p { color:var(--t2); font-size:13px; line-height:1.6; }
+.cache-warning-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:22px; }
+.cache-warning-actions button {
+  min-height:42px; padding:0 15px; border-radius:11px;
+  font-size:13px; font-weight:700; transition:background .15s ease, transform .15s ease;
+}
+.cache-warning-cancel { border:1px solid var(--border); color:var(--t1); background:var(--card); }
+.cache-warning-cancel:hover { background:var(--card-h); }
+.cache-warning-confirm { border:0; color:#fff; background:var(--accent); }
+.cache-warning-confirm:hover { background:var(--accent-d); }
+.cache-warning-actions button:active { transform:scale(.97); }
+@media (max-width:640px) {
+  .cache-warning-card { padding:22px 20px; border-radius:18px; }
+  .cache-warning-actions button { min-height:46px; }
+}
+
 #resolution-warning {
   display:none; position:fixed; inset:0; z-index:20000;
   align-items:center; justify-content:center; padding:24px;
