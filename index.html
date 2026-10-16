@@ -68,7 +68,7 @@
       </svg>
       <input id="search-input" placeholder="Search stations…" autocomplete="off" spellcheck="false">
     </div>
-<span class="app-version" style="font-size:12px; font-weight:100; color:var(--t3); white-space:nowrap;">Fluxio v2.18</span>
+<span class="app-version" style="font-size:12px; font-weight:100; color:var(--t3); white-space:nowrap;">Fluxio v3</span>
     <div class="topbar-actions">
       <button class="icon-btn" onclick="showListeningStats()" title="Listening stats">
         <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
@@ -173,9 +173,6 @@
       </button>
       <canvas id="visualizer" width="140" height="28"></canvas>
     </div>
-    <div>
-      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
-    </div>
   </div>
   <div class="vol-wrap">
     <button class="vol-btn" onclick="toggleMute()" id="vol-btn">
@@ -208,11 +205,11 @@
   <section class="cache-warning-card" role="alertdialog" aria-modal="true" aria-labelledby="cache-warning-title" aria-describedby="cache-warning-message">
     <div class="cache-warning-icon" aria-hidden="true">!</div>
     <div class="cache-warning-eyebrow">Before you continue</div>
-    <h2 id="cache-warning-title">Clear this website’s cache?</h2>
-    <p id="cache-warning-message">This clears Fluxio’s offline cache and unregisters its service worker. Favourites are stored separately and won’t be removed by this button, but clearing browser/site data can put them at risk. Export a backup first if they matter to you.</p>
+    <h2 id="cache-warning-title">Clear this website’s saved data?</h2>
+    <p id="cache-warning-message">This clears Fluxio’s offline cache and saved website data, including your favourites, recent stations, and settings. Export your favourites before continuing if you want to keep them.</p>
     <div class="cache-warning-actions">
       <button class="cache-warning-cancel" onclick="closeClearCacheWarning()">Cancel</button>
-      <button class="cache-warning-confirm" onclick="clearSiteCache()">Clear cache</button>
+      <button class="cache-warning-confirm" onclick="clearSiteCache()">Clear site data</button>
     </div>
   </section>
 </div>
