@@ -80,7 +80,18 @@ setInterval(() => {
 }, 5000);
 
 function showListeningStats() {
-  /* ...unchanged... */
+  const entries = Object.entries(listeningTime).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((n, [, s]) => n + s, 0);
+  const fmt = s => s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : `${Math.max(0, Math.round(s / 60))}m`;
+  const rows = entries.length ? entries.map(([cat, s]) => {
+    const m = CAT_META[cat] || {emoji: "📻"};
+    return `<div class="stat-row"><div class="stat-top"><span>${m.emoji} ${cat}</span><span>${fmt(s)}</span></div><div class="stat-bar"><i style="width:${Math.round(s / entries[0][1] * 100)}%"></i></div></div>`;
+  }).join("") : `<p class="stat-empty">Nothing yet. Start listening and your stats will show up here.</p>`;
+  const modal = document.createElement("div");
+  modal.className = "stats-modal";
+  modal.onclick = e => e.target === modal && modal.remove();
+  modal.innerHTML = `<div class="modal-box"><div class="modal-title">Listening stats</div><div class="stat-total">${fmt(total)}<span>total listening time</span></div>${rows}<button class="modal-close" onclick="this.closest('.stats-modal').remove()">Close</button></div>`;
+  document.body.appendChild(modal);
 }
 /* ── VISUALIZER ── */
 function setupVisualizer() {
@@ -232,6 +243,9 @@ function playStation(station, cardEl, skipFade) {
     maybeShowSafariVisualizerToast();
     setupVisualizer();
     currentStation = station; currentCardEl = cardEl; failCount = 0;
+    document.getElementById("player").classList.add("has-station");
+    document.querySelector(".player-random-btn")?.setAttribute("inert", "");
+    document.querySelector(".transport-btns")?.removeAttribute("inert");
     localStorage.setItem(LS_LAST, station.url);
     addToRecent(station);
     audio.src = station.url; audio.load();
@@ -242,6 +256,7 @@ function playStation(station, cardEl, skipFade) {
     });
     fadeIn(0.5);
     const m = CAT_META[station.cat] || {emoji:"📻", grad:"#222"};
+    updatePlayerGradient(m.grad);
     const npArt = document.getElementById("np-art");
     npArt.style.background = m.grad; npArt.textContent = m.emoji;
     const nameEl = document.getElementById("np-name");
@@ -273,6 +288,24 @@ function playStation(station, cardEl, skipFade) {
     document.querySelectorAll(".sb-playlist").forEach(x => x.classList.toggle("active", x.dataset.cat === station.cat));
   };
   if (skipFade || !isPlaying) doLoad(); else fadeOut(0.25, doLoad);
+}
+
+function updatePlayerGradient(gradient) {
+  const line = document.getElementById("player-gradient-line");
+  if (!line || !gradient) return;
+  const layers = line.querySelectorAll(".player-gradient-layer");
+  const activeIndex = Number(line.dataset.activeLayer || 0);
+  const nextIndex = 1 - activeIndex;
+  const activeLayer = layers[activeIndex];
+  const nextLayer = layers[nextIndex];
+  if (!activeLayer || !nextLayer) return;
+
+  nextLayer.style.backgroundImage = gradient;
+  nextLayer.style.opacity = "0";
+  void nextLayer.offsetWidth;
+  nextLayer.style.opacity = "1";
+  activeLayer.style.opacity = "0";
+  line.dataset.activeLayer = String(nextIndex);
 }
 
 function addToRecent(station) {
@@ -316,6 +349,8 @@ window.addEventListener("resize", () => {
 /* ── AUDIO EVENTS ── */
 audio.addEventListener("playing", () => {
   isPlaying = true; setLoading(false); setPlayIcon("pause");
+  updateStationCardPlayButtons();
+  document.body.classList.add("is-playing");
   if (fullscreenModal) {
     updateFullscreenNowPlayingContents(currentStation);
     updateFullscreenPlayButton(true);
@@ -328,7 +363,9 @@ audio.addEventListener("playing", () => {
 });
 audio.addEventListener("pause", () => {
   isPlaying = false;
+  document.body.classList.remove("is-playing");
   setPlayIcon("play");
+  updateStationCardPlayButtons();
   if (fullscreenModal) updateFullscreenPlayButton();
   document.getElementById("prog-fill").classList.remove("playing");
   document.getElementById("np-status").innerHTML = "Paused";
@@ -339,6 +376,8 @@ audio.addEventListener("waiting", () => setLoading(true));
 audio.addEventListener("error", (e) => {
   console.error("Audio element error event:", e, audio.error);
   setLoading(false); failCount++; isPlaying = false; setPlayIcon("play");
+  updateStationCardPlayButtons();
+  document.body.classList.remove("is-playing");
   document.getElementById("np-status").innerHTML = "Stream unavailable";
   if (failCount >= 2 && currentStation) { showToast("Auto-skipping…"); setTimeout(() => playAdjacent(1), 1500); }
 });
@@ -374,6 +413,17 @@ function setPlayIcon(s, animate = false) {
     ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>'
     : '<path d="M8 5v14l11-7z"/>';
   if (animate) animatePlayPauseButton(document.getElementById("play-pause-btn"));
+}
+
+function updateStationCardPlayButtons() {
+  document.querySelectorAll(".station-card").forEach(card => {
+    const playIcon = card.querySelector(".station-play-btn svg");
+    if (!playIcon) return;
+    const isActiveAndPlaying = currentStation && card.dataset.url === currentStation.url && isPlaying;
+    playIcon.innerHTML = isActiveAndPlaying
+      ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>'
+      : '<path d="M8 5v14l11-7z"/>';
+  });
 }
 
 function updateFullscreenPlayButton(forceState) {
@@ -528,6 +578,7 @@ function importFavourites(file) {
 
 function toggleFav(url) {
   let favs = getFavs();
+  const isAdding = !favs.includes(url);
   if (favs.includes(url)) { favs = favs.filter(f => f !== url); showToast("Removed from favourites"); }
   else { favs.unshift(url); showToast("⭐ Added to favourites"); }
   saveFavs(favs);
@@ -535,20 +586,30 @@ function toggleFav(url) {
     const u = btn.dataset.url;
     btn.textContent = isFav(u) ? "★" : "☆";
     btn.classList.toggle("faved", isFav(u));
+    if (isAdding && u === url) replayFavoriteBeat(btn);
   });
   updateFavBtn();
+  if (isAdding && currentStation?.url === url) {
+    replayFavoriteBeat(document.getElementById("np-fav-btn"));
+  }
+}
+
+function replayFavoriteBeat(element) {
+  playIconAnimation(element, "favorite-beat");
 }
 
 function toggleFavCurrent(e) { if (e && e.stopPropagation) e.stopPropagation(); if (!currentStation) return; toggleFav(currentStation.url); }
 
 function updateFavBtn() {
   const btn = document.getElementById("np-fav-btn");
-  if (!currentStation) { btn.textContent = "♡"; return; }
-  btn.textContent = isFav(currentStation.url) ? "♥" : "♡";
-  btn.style.color = isFav(currentStation.url) ? "var(--accent)" : "";
+  const faved = currentStation && isFav(currentStation.url);
+  btn.classList.toggle("faved", Boolean(faved));
+  btn.setAttribute("aria-pressed", String(Boolean(faved)));
+  btn.setAttribute("aria-label", faved ? "Remove from favourites" : "Add to favourites");
 }
 
 let fullscreenModal = null;
+let quoteInterval = null;
 
 function closeFullscreenNowPlaying() {
   if (!fullscreenModal) return;
@@ -563,81 +624,70 @@ function closeFullscreenNowPlaying() {
 }
 
 function showFullscreenNowPlaying() {
-  if (!currentStation) return;
-  if (fullscreenModal) return;
+  if (matchMedia("(max-width: 640px)").matches || !currentStation || fullscreenModal) return;
   const m = CAT_META[currentStation.cat] || {emoji:"📻", grad:"#222"};
   const modal = document.createElement("div");
   modal.className = "fullscreen-modal";
-  
+
   const closeBtn = document.createElement("div");
   closeBtn.className = "fullscreen-close";
   closeBtn.textContent = "✕";
-  closeBtn.onclick = (e) => { e.stopPropagation(); closeFullscreenNowPlaying(); };
-  
+  closeBtn.onclick = e => { e.stopPropagation(); closeFullscreenNowPlaying(); };
+
   const artwork = document.createElement("div");
   artwork.className = "fullscreen-artwork";
   artwork.textContent = m.emoji;
   artwork.style.background = m.grad;
-  
+
   const title = document.createElement("div");
   title.className = "fullscreen-title";
   title.textContent = currentStation.name;
-  
+
   const category = document.createElement("div");
   category.className = "fullscreen-category";
   category.textContent = currentStation.cat;
-  
+
   const controls = document.createElement("div");
   controls.className = "fullscreen-controls";
-  
+
   const prevBtn = document.createElement("button");
   prevBtn.className = "fullscreen-control-btn";
   prevBtn.textContent = "⏮";
-  prevBtn.onclick = (e) => { e.stopPropagation(); playAdjacent(-1); };
-  
+  prevBtn.onclick = e => { e.stopPropagation(); playAdjacent(-1); };
+
   const ppBtn = document.createElement("button");
   ppBtn.className = "fullscreen-pp-btn fullscreen-control-btn";
   ppBtn.textContent = isPlaying ? "⏸" : "▶";
-  ppBtn.onclick = (e) => {
+  ppBtn.onclick = e => {
     e.stopPropagation();
     const willPlay = audio.paused;
     togglePlay();
     updateFullscreenPlayButton(willPlay);
   };
-  
+
   const nextBtn = document.createElement("button");
   nextBtn.className = "fullscreen-control-btn";
   nextBtn.textContent = "⏭";
-  nextBtn.onclick = (e) => { e.stopPropagation(); playAdjacent(1); };
-  
-  controls.appendChild(prevBtn);
-  controls.appendChild(ppBtn);
-  controls.appendChild(nextBtn);
+  nextBtn.onclick = e => { e.stopPropagation(); playAdjacent(1); };
+
+  controls.append(prevBtn, ppBtn, nextBtn);
 
   const visualizerWrap = document.createElement("div");
   visualizerWrap.className = "fullscreen-visualizer-wrap";
-  visualizerWrap.appendChild(artwork);
-  visualizerWrap.appendChild(controls);
-  
-  modal.onclick = (e) => { if (e.target === modal) closeFullscreenNowPlaying(); };
-  modal.appendChild(closeBtn);
-  modal.appendChild(visualizerWrap);
-  modal.appendChild(title);
-  modal.appendChild(category);
+  visualizerWrap.append(artwork, controls);
+
+  modal.onclick = e => { if (e.target === modal) closeFullscreenNowPlaying(); };
+  modal.append(closeBtn, visualizerWrap, title, category);
 
   const quote = document.createElement("div");
   quote.className = "fullscreen-quote";
   quote.innerHTML = '<span class="quote-text"></span><span class="quote-author"></span>';
   modal.appendChild(quote);
-
   document.body.appendChild(modal);
   fullscreenModal = modal;
+  startQuoteRotation();
 
-startQuoteRotation();
-
-  if (modal.requestFullscreen) {
-    modal.requestFullscreen().catch(() => {});
-  }
+  if (modal.requestFullscreen) modal.requestFullscreen().catch(() => {});
 }
 
 function updateFullscreenNowPlayingContents(station) {
@@ -655,14 +705,22 @@ function updateFullscreenNowPlayingContents(station) {
 }
 
 /* ── THEME ── */
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#f5f5f5" : "#0e0e0e";
+  const themeButton = document.getElementById("theme-toggle");
+  if (themeButton) {
+    const nextTheme = t === "light" ? "dark" : "light";
+    themeButton.title = `Switch to ${nextTheme} mode`;
+    themeButton.setAttribute("aria-label", `Switch to ${nextTheme} mode`);
+  }
+}
 function toggleTheme() {
-  const el = document.documentElement;
-  const next = el.dataset.theme === "dark" ? "light" : "dark";
-  el.dataset.theme = next; localStorage.setItem(LS_THEME, next);
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(next); localStorage.setItem(LS_THEME, next);
   showToast(next === "dark" ? "🌙 Dark mode" : "☀️ Light mode");
 }
-const savedTheme = localStorage.getItem(LS_THEME);
-if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+applyTheme(localStorage.getItem(LS_THEME) || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
 
 /* ── SLEEP TIMER ── */
 function setSleepTimer(minutes) {
@@ -727,6 +785,7 @@ function updateMediaSession() {
 
 /* ── SEARCH FOCUS (mobile bottom nav) ── */
 function focusSearch() {
+  animateNavIcons("#bnav-search svg", "nav-icon-search");
   document.getElementById("search-input").focus();
   document.getElementById("main").scrollTop = 0;
   setBnavActive("bnav-search");
@@ -743,7 +802,7 @@ function shareStation() {
 
 /* ── CONTINUE BAR ── */
 function updateContinueBar() {
-  const lastUrl = localStorage.getItem(LS_LAST);
+  const lastUrl = sharedStation ? sharedStation.url : localStorage.getItem(LS_LAST);
   const bar = document.getElementById("continue-bar");
   if (!bar) return;
   if (!lastUrl) { bar.classList.add("hidden"); return; }
@@ -754,6 +813,7 @@ function updateContinueBar() {
   bar.querySelector(".continue-art").style.background = m.grad;
   bar.querySelector(".continue-art").textContent = m.emoji;
   bar.querySelector(".continue-name").textContent = s.name;
+  bar.querySelector(".continue-label").textContent = sharedStation ? "Shared with you" : "Continue listening";
   bar.onclick = () => playStation(s, document.querySelector(`.station-card[data-url="${CSS.escape(s.url)}"]`));
 }
 
@@ -791,6 +851,7 @@ function closeShortcuts(e) { if (!e || e.target === document.getElementById("sho
 
 /* ── KEYBOARD ── */
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { closeFullscreenNowPlaying(); closeShortcuts(); document.querySelectorAll(".stats-modal").forEach(m => m.remove()); return; }
   const tag = document.activeElement.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA") return;
   switch(e.code) {
@@ -827,7 +888,35 @@ function setNavActive(id) {
   if (bnavMap[id]) setBnavActive(bnavMap[id]);
 }
 
+const activeIconAnimations = new WeakSet();
+
+function playIconAnimation(element, animationClass) {
+  if (!element || activeIconAnimations.has(element) || element.classList.contains(animationClass)) return;
+  activeIconAnimations.add(element);
+  let fallbackTimer;
+  const onAnimationEnd = event => {
+    if (event.target === element) cleanup();
+  };
+  const onAnimationCancel = () => cleanup();
+  const cleanup = () => {
+    clearTimeout(fallbackTimer);
+    element.removeEventListener("animationend", onAnimationEnd);
+    element.removeEventListener("animationcancel", onAnimationCancel);
+    element.classList.remove(animationClass);
+    activeIconAnimations.delete(element);
+  };
+  element.addEventListener("animationend", onAnimationEnd);
+  element.addEventListener("animationcancel", onAnimationCancel);
+  fallbackTimer = setTimeout(cleanup, 1000);
+  element.classList.add(animationClass);
+}
+
+function animateNavIcons(selector, animationClass) {
+  document.querySelectorAll(selector).forEach(icon => playIconAnimation(icon, animationClass));
+}
+
 function navHome() {
+  animateNavIcons("#sb-home svg, #bnav-home svg", "nav-icon-home");
   activeFilter = "All"; activeMood = null;
   document.getElementById("search-input").value = "";
   setNavActive("sb-home"); setChipActive("All"); renderMain();
@@ -835,6 +924,7 @@ function navHome() {
 }
 
 function navFavs() {
+  animateNavIcons("#sb-favs svg, #bnav-favs svg", "nav-icon-beat");
   setNavActive("sb-favs"); activeFilter = "__favs__"; activeMood = null;
   document.getElementById("search-input").value = "";
   setChipActive(null); renderMain();
@@ -842,6 +932,7 @@ function navFavs() {
 }
 
 function navRecent() {
+  animateNavIcons("#sb-recent svg, #bnav-recent svg", "nav-icon-spin");
   setNavActive("sb-recent"); activeFilter = "__recent__"; activeMood = null;
   document.getElementById("search-input").value = "";
   setChipActive(null); renderMain();
@@ -902,6 +993,8 @@ function makeCard(station) {
   const card = document.createElement("div");
   card.className = "station-card" + (isActive ? " active" : "");
   card.dataset.url = station.url;
+  card.tabIndex = 0; card.setAttribute("role", "button"); card.setAttribute("aria-label", "Play " + station.name);
+  card.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); card.click(); } });
   const art = document.createElement("div");
   art.className = "station-art"; art.style.background = m.grad;
   art.innerHTML = `${m.emoji}
@@ -909,11 +1002,12 @@ function makeCard(station) {
       ${faved?"★":"☆"}
     </button>
     <button class="station-play-btn" title="Play">
-      <svg viewBox="0 0 24 24">${isActive ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>' : '<path d="M8 5v14l11-7z"/>'}</svg>
-    </button>`;
+      <svg viewBox="0 0 24 24">${isActive && isPlaying ? '<path d="M6 19h4V5H6zm8-14v14h4V5z"/>' : '<path d="M8 5v14l11-7z"/>'}</svg>
+    </button>
+    <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
   card.appendChild(art);
   const nameEl = document.createElement("div"); nameEl.className = "station-card-name"; nameEl.textContent = station.name; card.appendChild(nameEl);
-  const subEl  = document.createElement("div"); subEl.className  = "station-card-sub";  subEl.textContent  = "Live radio";  card.appendChild(subEl);
+  const subEl  = document.createElement("div"); subEl.className  = "station-card-sub";  subEl.textContent  = station.cat;  card.appendChild(subEl);
   card.addEventListener("click", () => {
     if (currentStation && currentStation.url === station.url) {
       togglePlay();
@@ -1023,8 +1117,13 @@ document.getElementById("search-input").addEventListener("input", () => {
   renderMain();
 });
 
+/* ── SHARED LINK (?station=) ── */
+const _sharedParam = new URLSearchParams(location.search).get("station");
+const sharedStation = _sharedParam ? STATIONS.find(s => s.url === _sharedParam.trim()) : null;
+
 /* ── INIT ── */
 buildChips(); buildLibrary(); renderMain();
+document.querySelector(".logo-wrap").addEventListener("click", navHome);
 const savedLastUrl = localStorage.getItem(LS_LAST);
 if (savedLastUrl) updateContinueBar();
 
