@@ -845,13 +845,49 @@ function showToast(msg) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
 }
 
+function showClearCacheWarning() {
+  const modal = document.getElementById("cache-warning-modal");
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+  modal.querySelector(".cache-warning-cancel").focus();
+}
+
+function closeClearCacheWarning() {
+  const modal = document.getElementById("cache-warning-modal");
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+async function clearSiteCache() {
+  try {
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration => registration.unregister()));
+    }
+    closeClearCacheWarning();
+    showToast("Website cache cleared — favourites kept");
+  } catch (error) {
+    console.error("Could not clear website cache:", error);
+    closeClearCacheWarning();
+    showToast("Could not clear the website cache");
+  }
+}
+
+document.getElementById("cache-warning-modal").addEventListener("click", event => {
+  if (event.target.id === "cache-warning-modal") closeClearCacheWarning();
+});
+
 /* ── SHORTCUTS ── */
 function showShortcuts()   { document.getElementById("shortcuts-modal").classList.add("open"); }
 function closeShortcuts(e) { if (!e || e.target === document.getElementById("shortcuts-modal")) document.getElementById("shortcuts-modal").classList.remove("open"); }
 
 /* ── KEYBOARD ── */
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") { closeFullscreenNowPlaying(); closeShortcuts(); document.querySelectorAll(".stats-modal").forEach(m => m.remove()); return; }
+  if (e.key === "Escape") { closeFullscreenNowPlaying(); closeShortcuts(); closeClearCacheWarning(); document.querySelectorAll(".stats-modal").forEach(m => m.remove()); return; }
   const tag = document.activeElement.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA") return;
   switch(e.code) {
