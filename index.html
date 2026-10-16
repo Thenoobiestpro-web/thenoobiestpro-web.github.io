@@ -73,6 +73,9 @@
       <button class="icon-btn" onclick="showListeningStats()" title="Listening stats">
         <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
       </button>
+      <button class="icon-btn mobile-show" onclick="showClearCacheWarning()" title="Clear site cache" aria-label="Clear site cache">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 8.94 10h-2.02A7 7 0 1 1 12 5c1.93 0 3.68.79 4.95 2.05L14 10h7V3l-2.62 2.62A8.96 8.96 0 0 0 12 3Zm-1 4v5.4l4.2 2.5 1-1.65-3.2-1.9V7H11Z"/></svg>
+      </button>
       <input type="file" id="import-favs-input" accept="application/json" style="display:none" onchange="importFavourites(this.files[0])">
       <button class="icon-btn" onclick="exportFavourites()" title="Export favourites">
         <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18v10.17l3.59-3.58L17 10l-5 5-5-5 1.41-1.41L11 12.17V2h1z"/></svg>
@@ -201,6 +204,18 @@
 </div>
 
 <div id="toast"></div>
+<div id="cache-warning-modal" class="cache-warning-modal" aria-hidden="true" role="presentation">
+  <section class="cache-warning-card" role="alertdialog" aria-modal="true" aria-labelledby="cache-warning-title" aria-describedby="cache-warning-message">
+    <div class="cache-warning-icon" aria-hidden="true">!</div>
+    <div class="cache-warning-eyebrow">Before you continue</div>
+    <h2 id="cache-warning-title">Clear this website’s cache?</h2>
+    <p id="cache-warning-message">This clears Fluxio’s offline cache and unregisters its service worker. Favourites are stored separately and won’t be removed by this button, but clearing browser/site data can put them at risk. Export a backup first if they matter to you.</p>
+    <div class="cache-warning-actions">
+      <button class="cache-warning-cancel" onclick="closeClearCacheWarning()">Cancel</button>
+      <button class="cache-warning-confirm" onclick="clearSiteCache()">Clear cache</button>
+    </div>
+  </section>
+</div>
 <audio id="radio" preload="none" playsinline crossorigin="anonymous"></audio>
 <audio id="radio2" preload="none" playsinline crossorigin="anonymous" style="display:none"></audio>
 
