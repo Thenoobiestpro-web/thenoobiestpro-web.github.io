@@ -13,13 +13,26 @@
   <!-- Windows tiles -->
   <meta name="msapplication-TileColor" content="#0e0e0e">
   <meta name="msapplication-config" content="./browserconfig.xml">
-  <title>Fluxio</title>
+  <title>Fluxio – Live UK Radio</title>
+  <meta name="description" content="Fluxio is a fast, free internet radio player. Stream UK stations from Capital, Heart, Smooth, Classic FM, LBC and more, with favourites, mood modes and a sleep timer.">
+  <meta property="og:title" content="Fluxio – Live UK Radio">
+  <meta property="og:description" content="Fast, free internet radio. Pick a mood, hit play.">
+  <meta property="og:type" content="website">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<div id="resolution-warning" role="alert" aria-live="assertive">
+  <div class="resolution-warning-card">
+    <div class="resolution-warning-icon" aria-hidden="true">↔</div>
+    <div class="resolution-warning-label">Minimum 320 px</div>
+    <h1>Screen too small</h1>
+    <p>Fluxio needs at least 320 px of width and 360 px of height. Rotate your device or use a larger screen.</p>
+  </div>
+</div>
 
 <aside id="sidebar">
   <div class="logo-wrap">
@@ -49,10 +62,13 @@
 <main id="main">
   <div class="topbar">
     <div class="search-wrap">
-      <span class="search-icon">⌕</span>
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="10.8" cy="10.8" r="6.8" />
+        <path d="m16 16 4.2 4.2" />
+      </svg>
       <input id="search-input" placeholder="Search stations…" autocomplete="off" spellcheck="false">
     </div>
-<span style="font-size:12px; font-weight:100; color:var(--t3); white-space:nowrap;">Fluxio v2.18</span>
+<span class="app-version" style="font-size:12px; font-weight:100; color:var(--t3); white-space:nowrap;">Fluxio v2.18</span>
     <div class="topbar-actions">
       <button class="icon-btn" onclick="showListeningStats()" title="Listening stats">
         <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
@@ -68,8 +84,14 @@
         <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
         <span class="btn-label">Shuffle</span>
       </button>
-      <button class="icon-btn mobile-show" onclick="toggleTheme()" title="Toggle theme">
-        <svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 0 0-1.41 0 .996.996 0 0 0 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0a.996.996 0 0 0 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0zM7.05 18.36l-1.06 1.06a.996.996 0 0 0 0 1.41c.39.39 1.03.39 1.41 0l1.06-1.06a.996.996 0 0 0 0-1.41.996.996 0 0 0-1.41 0z"/></svg>
+      <button id="theme-toggle" class="icon-btn mobile-show" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g class="theme-sun" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8">
+            <circle cx="12" cy="12" r="3.7"/>
+            <path d="M12 2.5v2M12 19.5v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2.5 12h2M19.5 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>
+          </g>
+          <path class="theme-moon" d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.8 8.8 0 1 0 20.2 15.2Z"/>
+        </svg>
       </button>
       <button class="icon-btn" onclick="showSleepTimerModal()" title="Sleep timer">
         <svg viewBox="0 0 24 24"><path d="M7 2v1h10V2H7zm13.8 3.3c.4-.4.4-1 0-1.4l-1.4-1.4c-.4-.4-1-.4-1.4 0L17 4.2c-1.6-1.2-3.6-2-5.8-2-5.5 0-10 4.5-10 10s4.5 10 10 10 10-4.5 10-10c0-2.2-.8-4.2-2-5.8l2.5-2.5zm-7.8 17.7c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-14c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm1 9h-3v-5h3v5z"/></svg>
@@ -115,16 +137,25 @@
 </nav>
 
 <div id="player">
+  <div class="player-gradient-line" id="player-gradient-line" aria-hidden="true">
+    <span class="player-gradient-layer is-active"></span>
+    <span class="player-gradient-layer"></span>
+  </div>
   <div class="np-wrap" onclick="showFullscreenNowPlaying()" style="cursor:pointer;">
     <div class="np-art" id="np-art">📻</div>
     <div class="np-text">
       <div class="np-name" id="np-name"><span class="np-name-inner"><span class="np-name-text">Select a station</span><span class="np-name-text np-name-clone" style="display:none"></span></span></div>
       <div class="np-status" id="np-status">—</div>
     </div>
-    <button class="np-fav" id="np-fav-btn" onclick="toggleFavCurrent(event)" title="Favourite">♡</button>
+    <button class="np-fav" id="np-fav-btn" onclick="toggleFavCurrent(event)" title="Favourite" aria-label="Add to favourites" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+    </button>
   </div>
   <div class="transport-wrap">
-    <div class="transport-btns">
+    <button class="player-random-btn" onclick="playRandom()" title="Play a random station" aria-label="Play a random station">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41ZM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5Zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13Z"/></svg>
+    </button>
+    <div class="transport-btns" inert>
       <button class="t-btn sm" onclick="playAdjacent(-1)" title="Previous">
         <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
       </button>
