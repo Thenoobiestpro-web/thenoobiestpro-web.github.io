@@ -355,7 +355,6 @@ audio.addEventListener("playing", () => {
     updateFullscreenNowPlayingContents(currentStation);
     updateFullscreenPlayButton(true);
   }
-  document.getElementById("prog-fill").classList.add("playing");
   document.getElementById("np-status").innerHTML = `<span class="live-dot"></span> <span class="live-badge">LIVE</span>`;
   document.getElementById("visualizer").classList.add("active");
   visFadeTarget = 0;
@@ -367,7 +366,6 @@ audio.addEventListener("pause", () => {
   setPlayIcon("play");
   updateStationCardPlayButtons();
   if (fullscreenModal) updateFullscreenPlayButton();
-  document.getElementById("prog-fill").classList.remove("playing");
   document.getElementById("np-status").innerHTML = "Paused";
 
   visFadeTarget = 1;
@@ -859,7 +857,13 @@ function closeClearCacheWarning() {
 }
 
 async function clearSiteCache() {
+  const confirmButton = document.querySelector(".cache-warning-confirm");
+  confirmButton.disabled = true;
+  confirmButton.textContent = "Clearing…";
   try {
+    if (window.fluxioDesktop?.clearCache) {
+      await window.fluxioDesktop.clearCache();
+    }
     if ("caches" in window) {
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map(name => caches.delete(name)));
@@ -868,12 +872,24 @@ async function clearSiteCache() {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.map(registration => registration.unregister()));
     }
+    if ("indexedDB" in window && indexedDB.databases) {
+      const databases = await indexedDB.databases();
+      await Promise.all(databases.map(({name}) => name && new Promise(resolve => {
+        const request = indexedDB.deleteDatabase(name);
+        request.onsuccess = request.onerror = request.onblocked = () => resolve();
+      })));
+    }
+    localStorage.clear();
+    sessionStorage.clear();
+    sessionStorage.setItem("fluxio_skip_sw_once", "1");
     closeClearCacheWarning();
-    showToast("Website cache cleared — favourites kept");
+    showToast("Site data cleared — reloading");
+    setTimeout(() => location.reload(), 350);
   } catch (error) {
     console.error("Could not clear website cache:", error);
-    closeClearCacheWarning();
-    showToast("Could not clear the website cache");
+    confirmButton.disabled = false;
+    confirmButton.textContent = "Clear site data";
+    showToast("Could not clear all site data");
   }
 }
 
@@ -1166,8 +1182,12 @@ if (savedLastUrl) updateContinueBar();
 /* ── SERVICE WORKER / PWA INSTALL HANDLING ── */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    if (sessionStorage.getItem("fluxio_skip_sw_once") === "1") {
+      sessionStorage.removeItem("fluxio_skip_sw_once");
+      return;
+    }
     navigator.serviceWorker.register('./sw.js')
-    .catch(err => console.error('ServiceWorker registration failed:', err));
+      .catch(err => console.error('ServiceWorker registration failed:', err));
   });
 }
 
